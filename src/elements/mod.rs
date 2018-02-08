@@ -10,14 +10,13 @@ use time;
 
 
 
-
-
-
-
-pub trait Window {
-    fn new(title: String, width: u32, height: u32) -> Self;
-    fn run(&mut self, fps: f64, build_window: &FnMut(Self));
+pub trait Element {
+    fn stop(&self);
+    fn build_window(&self, ui: &mut conrod::UiCell);
 }
+
+
+
 
 
 
@@ -27,16 +26,24 @@ pub struct BaseWindow {
     display: glium::Display,
     renderer: conrod::backend::glium::Renderer,
     image_map: conrod::image::Map<glium::texture::Texture2d>,
+    ui: conrod::Ui,
 
-    pub ui: conrod::Ui,
+    elements: Vec<Box<Element>>,
 }
 
 impl BaseWindow {
-    fn build_window(&mut self) { }
-}
 
-impl Window for BaseWindow {
-    fn new(title: String, width: u32, height: u32) -> Self {
+    pub fn get_ui(&mut self) -> &mut conrod::Ui {
+        &mut self.ui
+    }
+
+
+    pub fn add_element(&mut self, element: Box<Element>) {
+        self.elements.push(element);
+    }
+
+
+    pub fn new(title: String, width: u32, height: u32) -> Self {
         // build window
         let events_loop = glium::glutin::EventsLoop::new();
         let window = glium::glutin::WindowBuilder::new()
@@ -75,16 +82,19 @@ impl Window for BaseWindow {
             display,
             renderer,
             image_map,
-            ui
+            ui,
+            elements: Vec::new(),
         }
     }
 
-    fn run(&mut self, fps: f64, build_window: &FnMut(Self)) {
+    pub fn run(&mut self, fps: f64) {
         let dt_ns = (1.0e9/fps) as u64;
 
         // events
         let mut events = Vec::new();
         let mut t0 = time::precise_time_ns();
+
+        println!("loop is starting ...............................");
         'render: loop {
             events.clear();
 
@@ -138,8 +148,11 @@ impl Window for BaseWindow {
             }
 
             if update {
-                // add some stuff
-                build_window();
+                //println!("basw window updating....");
+                let ui = &mut self.ui.set_widgets();
+                for el in &self.elements {
+                    el.build_window(ui);
+                }
             }
 
             // draw ui if changed
@@ -150,6 +163,10 @@ impl Window for BaseWindow {
                 self.renderer.draw(&self.display, &mut target, &self.image_map).unwrap();
                 target.finish().unwrap();
             }
+        }
+
+        for el in &self.elements {
+            el.stop();
         }
     }
 }

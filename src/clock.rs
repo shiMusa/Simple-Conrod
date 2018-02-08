@@ -51,17 +51,13 @@ impl ClockCore {
                 Err(_e) => ()
             }
 
-
-
-            let t = time::precise_time_ns() - t0;
-            let mut linkdat = self.time.write().unwrap();
-            *linkdat = (t as f64) * 1e-9;
-
-
+            {
+                let t = time::precise_time_ns() - t0;
+                let mut linkdat = self.time.write().unwrap();
+                *linkdat = (t as f64) * 1e-9;
+            }
 
             let dt = time::precise_time_ns() - old;
-            //let fdt = (dt as f64) * 1e-9;
-            //println!("fps = {:8.0}, dt = {:.6}", 1.0/fdt, fdt);
 
             old = time::precise_time_ns();
             if DT_NS > dt {
@@ -95,65 +91,70 @@ widget_ids!(
         circle_min,
         line_min,
         text_min,
+        circle_h,
+        line_h,
+        text_h,
     }
 );
 
 
 
 pub struct Clock {
-    simple_window: BaseWindow,
     clock_ids: ClockIds,
 
-    time: Option<Arc<RwLock<f64>>>,
-    sender: Option<Sender<ClockMsg>>,
+    time: Arc<RwLock<f64>>,
+    sender: Sender<ClockMsg>,
 }
 
 impl Clock {
-    pub fn setup(&mut self, time: Arc<RwLock<f64>>, sender: Sender<ClockMsg>) {
-        self.time = Some(time);
-        self.sender = Some(sender);
+    pub fn new(ui: &mut conrod::Ui, time: Arc<RwLock<f64>>, sender: Sender<ClockMsg>) -> Self {
+        let clock_ids = ClockIds::new(ui.widget_id_generator());
+        Clock { clock_ids, time, sender }
     }
 }
 
-impl Window for Clock {
-    fn new(title: String, width: u32, height: u32) -> Self {
-        let mut sw = BaseWindow::new(title, width, height);
-        let ids = ClockIds::new(sw.ui.widget_id_generator());
-        Clock {
-            simple_window: sw,
-            clock_ids: ids,
-            time: None,
-            sender: None,
-        }
+impl Element for Clock {
+    fn stop(&self) {
+        self.sender.send(ClockMsg::Stop);
     }
-    fn run(&mut self, fps: f64) {
-        self.simple_window.run(fps);
-    }
-    fn build_window(&mut self) {
-        self.simple_window.build_window();
-
-        let sw = &mut self.simple_window;
-        let ui = &mut sw.ui.set_widgets();
-
+    fn build_window(&self, ui: &mut conrod::UiCell) {
 
         let mut t = 0.0;
         {
-            let loc_time = self.time.clone().unwrap();
-            t = *loc_time.read().unwrap();
+            t = *self.time.read().unwrap();
         }
 
-        println!("{}",t);
+        //println!("{}",t);
 
         let hours = (t/(60.0*60.0)) as u8;
         let mins = (t/60.0) as u8;
         let secs = t as u8 - 60*mins;
 
-
-        let mut rx = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
-        let mut ry = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).cos();
         let style = widget::primitive::shape::Style::outline_styled(
             widget::primitive::line::Style::solid().thickness(5.0)
         );
+
+        let mut rx = (t / (60.0 * 60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
+        let mut ry = (t / (60.0 * 60.0 * 60.0) * 2.0 * std::f64::consts::PI).cos();
+        widget::Circle::styled(40.0, style)
+            .x_y(rx*600.0,ry*600.0)
+            .color(conrod::color::LIGHT_BROWN)
+            .set(self.clock_ids.circle_h, ui);
+
+        widget::Line::new([0.0, 0.0], [rx*(600.0-40.0),ry*(600.0-40.0)])
+            .thickness(5.0)
+            .color(conrod::color::LIGHT_BROWN)
+            .set(self.clock_ids.line_h, ui);
+
+        widget::Text::new(&format!("{:2}",hours))
+            .x_y(rx*600.0,ry*600.0)
+            .color(conrod::color::LIGHT_BROWN)
+            .font_size(48)
+            .set(self.clock_ids.text_h, ui);
+
+
+        rx = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
+        ry = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).cos();
         widget::Circle::styled(66.0, style)
             .x_y(rx*500.0,ry*500.0)
             .color(conrod::color::LIGHT_GREEN)

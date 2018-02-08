@@ -79,6 +79,7 @@ impl System {
 
 
 fn main() {
+    /*
     let link = Link {
         data: Arc::new(RwLock::new(0.0))
     };
@@ -103,6 +104,7 @@ fn main() {
     let w1 = thread::spawn(move || {
         create_winow(l1, tx1);
     });
+    */
 
 
     // clock --------------------------------------------------
@@ -122,17 +124,22 @@ fn main() {
     use elements::*;
 
     let w2 = thread::spawn(move || {
-        let mut cl = clock::Clock::new("Clock".to_string(), 800, 600);
-        cl.setup(time, clock_send);
-        cl.run(120.0);
+        use elements::*;
+        use clock::*;
+        let mut base_window = BaseWindow::new("Clock".to_string(), 800, 600);
+
+        let mut clock = Clock::new(base_window.get_ui(), time, clock_send);
+        base_window.add_element(Box::new(clock));
+
+        base_window.run(120f64);
     });
 
 
-    let _ = w0.join();
-    let _ = w1.join();
+    //let _ = w0.join();
+    //let _ = w1.join();
     let _ = w2.join();
     let _ = cl.join();
-    let _ = handle.join().unwrap();
+    //let _ = handle.join().unwrap();
 }
 
 
