@@ -2,7 +2,7 @@
 
 
 
-use conrod::{self, widget, Colorable, Positionable, Widget, Sizeable, Labelable};
+use conrod;
 use conrod::backend::glium::glium::{self, Surface};
 use time;
 
@@ -10,10 +10,28 @@ use time;
 
 
 
+pub type Vec2 = (u32, u32);
+
+
 pub trait Element {
     fn stop(&self);
     fn build_window(&self, ui: &mut conrod::UiCell);
+
+    fn resize(&mut self, size: Vec2);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -94,7 +112,7 @@ impl BaseWindow {
         let mut events = Vec::new();
         let mut t0 = time::precise_time_ns();
 
-        println!("loop is starting ...............................");
+        //println!("loop is starting ...............................");
         'render: loop {
             events.clear();
 
@@ -122,6 +140,12 @@ impl BaseWindow {
                                 },
                                 ..
                             } => break 'render,
+                            WindowEvent::Resized(w,h) => {
+                                //println!("resized: ({}, {})",w,h);
+                                for el in &mut self.elements {
+                                    el.resize((w,h));
+                                }
+                            }
                             _ => (),
                         }
                     },
