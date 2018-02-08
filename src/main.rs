@@ -32,8 +32,18 @@ fn main() {
         use clock::*;
         let mut base_window = BaseWindow::new("Clock".to_string(), 800, 600);
 
-        let clock = Clock::new(base_window.get_ui(), time, clock_send);
+        let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
         base_window.add_element(Box::new(clock));
+
+        let mut grid = container::List::new(container::ListAlignment::Vertical);
+        grid.resize((300, 700));
+        grid.add_element(
+            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+        );
+        grid.add_element(
+            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+        );
+        base_window.add_element(Box::new(grid));
 
         base_window.run(120f64);
     });

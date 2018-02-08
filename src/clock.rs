@@ -105,13 +105,14 @@ pub struct Clock {
     time: Arc<RwLock<f64>>,
     sender: Sender<ClockMsg>,
 
-    size: Vec2,
+    size: Vec2u32,
+    pos : Vec2f64,
 }
 
 impl Clock {
     pub fn new(ui: &mut conrod::Ui, time: Arc<RwLock<f64>>, sender: Sender<ClockMsg>) -> Self {
         let clock_ids = ClockIds::new(ui.widget_id_generator());
-        Clock { clock_ids, time, sender, size: (100,100) }
+        Clock { clock_ids, time, sender, size: (100,100), pos: (0.0,0.0) }
     }
 }
 
@@ -150,17 +151,17 @@ impl Element for Clock {
         let mut rx = (t / (60.0 * 60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
         let mut ry = (t / (60.0 * 60.0 * 60.0) * 2.0 * std::f64::consts::PI).cos();
         widget::Circle::styled(h_r, style)
-            .x_y(rx * h_l,ry*h_l)
+            .x_y(rx * h_l + self.pos.0,ry*h_l + self.pos.1)
             .color(conrod::color::LIGHT_BROWN)
             .set(self.clock_ids.circle_h, ui);
 
-        widget::Line::new([0.0, 0.0], [rx*(h_l-h_r),ry*(h_l-h_r)])
+        widget::Line::new([self.pos.0, self.pos.1], [rx*(h_l-h_r) + self.pos.0,ry*(h_l-h_r) + self.pos.1])
             .thickness(5.0)
             .color(conrod::color::LIGHT_BROWN)
             .set(self.clock_ids.line_h, ui);
 
         widget::Text::new(&format!("{:2}",hours))
-            .x_y(rx*h_l,ry*h_l)
+            .x_y(rx*h_l + self.pos.0,ry*h_l + self.pos.1)
             .color(conrod::color::LIGHT_BROWN)
             .font_size(48)
             .set(self.clock_ids.text_h, ui);
@@ -169,17 +170,17 @@ impl Element for Clock {
         rx = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
         ry = (t / (60.0 * 60.0) * 2.0 * std::f64::consts::PI).cos();
         widget::Circle::styled(min_r, style)
-            .x_y(rx*min_l,ry*min_l)
+            .x_y(rx*min_l + self.pos.0,ry*min_l + self.pos.1)
             .color(conrod::color::LIGHT_GREEN)
             .set(self.clock_ids.circle_min, ui);
 
-        widget::Line::new([0.0, 0.0], [rx*(min_l-min_r),ry*(min_l-min_r)])
+        widget::Line::new([self.pos.0, self.pos.1], [rx*(min_l-min_r) + self.pos.0,ry*(min_l-min_r) + self.pos.1])
             .thickness(5.0)
             .color(conrod::color::LIGHT_GREEN)
             .set(self.clock_ids.line_min, ui);
 
         widget::Text::new(&format!("{:2}",mins))
-            .x_y(rx*min_l,ry*min_l)
+            .x_y(rx*min_l + self.pos.0,ry*min_l + self.pos.1)
             .color(conrod::color::LIGHT_GREEN)
             .font_size(48)
             .set(self.clock_ids.text_min, ui);
@@ -188,23 +189,33 @@ impl Element for Clock {
         rx = (t / 60.0 * 2.0 * std::f64::consts::PI).sin();
         ry = (t / 60.0 * 2.0 * std::f64::consts::PI).cos();
         widget::Circle::styled(sec_r, style)
-            .x_y(rx*sec_l,ry*sec_l)
+            .x_y(rx*sec_l + self.pos.0,ry*sec_l + self.pos.1)
             .color(conrod::color::LIGHT_BLUE)
             .set(self.clock_ids.circle_sec, ui);
 
-        widget::Line::new([0.0, 0.0], [rx*(sec_l-sec_r),ry*(sec_l-sec_r)])
+        widget::Line::new([self.pos.0, self.pos.1], [rx*(sec_l-sec_r) + self.pos.0,ry*(sec_l-sec_r) + self.pos.1])
             .thickness(5.0)
             .color(conrod::color::LIGHT_BLUE)
             .set(self.clock_ids.line_sec, ui);
 
         widget::Text::new(&format!("{:2}",secs))
-            .x_y(rx*sec_l,ry*sec_l)
+            .x_y(rx*sec_l + self.pos.0,ry*sec_l + self.pos.1)
             .color(conrod::color::LIGHT_BLUE)
             .font_size(48)
             .set(self.clock_ids.text_sec, ui);
     }
 
-    fn resize(&mut self, size: Vec2) {
+    fn get_size(&self) -> Vec2u32 {
+        self.size
+    }
+    fn resize(&mut self, size: Vec2u32) {
         self.size = size;
+    }
+
+    fn get_position(&self) -> Vec2f64 {
+        self.pos
+    }
+    fn reposition(&mut self, pos: Vec2f64) {
+        self.pos = pos;
     }
 }

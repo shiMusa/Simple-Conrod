@@ -1,5 +1,6 @@
 
 
+pub mod container;
 
 
 use conrod;
@@ -10,14 +11,19 @@ use time;
 
 
 
-pub type Vec2 = (u32, u32);
+pub type Vec2u32 = (u32, u32);
+pub type Vec2f64 = (f64, f64);
 
 
 pub trait Element {
     fn stop(&self);
     fn build_window(&self, ui: &mut conrod::UiCell);
 
-    fn resize(&mut self, size: Vec2);
+    fn get_size(&self) -> Vec2u32;
+    fn resize(&mut self, size: Vec2u32);
+
+    fn get_position(&self) -> Vec2f64;
+    fn reposition(&mut self, pos: Vec2f64);
 }
 
 
