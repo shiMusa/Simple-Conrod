@@ -217,8 +217,6 @@ impl Element for Pad {
         self.frame = frame;
         use self::PadAlignment::*;
 
-        println!("{:?}", self.frame);
-
         // map relative values to absolute pixel
         let s = {
             let tmp = self.frame.size();
