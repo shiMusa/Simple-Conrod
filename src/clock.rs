@@ -122,16 +122,9 @@ impl Element for Clock {
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
 
-        let width = self.frame.width();
-        let height = self.frame.height();
         let max = self.frame.min_dim();
 
-        //println!("Clock: frame center {:?}, global {:?}", self.frame.center(), self.global_center);
-
         let center = self.frame.center()-self.global_center;
-
-
-        //println!("center = {:?}, frame = {:?}", center, self.frame);
 
         let sec_r = 0.075 * max as f64;
         let min_r = 0.05 * max as f64;
@@ -141,6 +134,8 @@ impl Element for Clock {
         let min_l = 0.35 * max as f64;
         let h_l   = 0.45 * max as f64;
 
+        let font_size = (0.05 * max as f64) as u32;
+        let linewidth = 0.01 * max as f64;
 
 
         let t;
@@ -153,7 +148,7 @@ impl Element for Clock {
         let secs = t as u8 - 60*mins;
 
         let style = widget::primitive::shape::Style::outline_styled(
-            widget::primitive::line::Style::solid().thickness(5.0)
+            widget::primitive::line::Style::solid().thickness(linewidth)
         );
 
         let mut rx = (t / (60.0 * 60.0 * 60.0) * 2.0 * std::f64::consts::PI).sin();
@@ -164,14 +159,14 @@ impl Element for Clock {
             .set(self.clock_ids.circle_h, ui);
 
         widget::Line::new([center.x as f64, center.y as f64], [rx*(h_l-h_r) + center.x as f64, ry*(h_l-h_r) + center.y as f64])
-            .thickness(5.0)
+            .thickness(linewidth)
             .color(conrod::color::LIGHT_BROWN)
             .set(self.clock_ids.line_h, ui);
 
         widget::Text::new(&format!("{:2}",hours))
             .x_y(rx*h_l + center.x as f64, ry*h_l + center.y as f64)
             .color(conrod::color::LIGHT_BROWN)
-            .font_size(48)
+            .font_size(font_size)
             .set(self.clock_ids.text_h, ui);
 
 
@@ -183,14 +178,14 @@ impl Element for Clock {
             .set(self.clock_ids.circle_min, ui);
 
         widget::Line::new([center.x as f64, center.y as f64], [rx*(min_l-min_r) + center.x as f64, ry*(min_l-min_r) + center.y as f64])
-            .thickness(5.0)
+            .thickness(linewidth)
             .color(conrod::color::LIGHT_GREEN)
             .set(self.clock_ids.line_min, ui);
 
         widget::Text::new(&format!("{:2}",mins))
             .x_y(rx*min_l + center.x as f64, ry*min_l + center.y as f64)
             .color(conrod::color::LIGHT_GREEN)
-            .font_size(48)
+            .font_size(font_size)
             .set(self.clock_ids.text_min, ui);
 
 
@@ -202,14 +197,14 @@ impl Element for Clock {
             .set(self.clock_ids.circle_sec, ui);
 
         widget::Line::new([center.x as f64, center.y as f64], [rx*(sec_l-sec_r) + center.x as f64, ry*(sec_l-sec_r) + center.y as f64])
-            .thickness(5.0)
+            .thickness(linewidth)
             .color(conrod::color::LIGHT_BLUE)
             .set(self.clock_ids.line_sec, ui);
 
         widget::Text::new(&format!("{:2}",secs))
             .x_y(rx*sec_l + center.x as f64, ry*sec_l + center.y as f64)
             .color(conrod::color::LIGHT_BLUE)
-            .font_size(48)
+            .font_size(font_size)
             .set(self.clock_ids.text_sec, ui);
     }
 
