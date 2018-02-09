@@ -4,6 +4,7 @@ version = "0.1.0"
 dependencies = [
  "conrod 0.57.0 (git+https://github.com/PistonDevelopers/conrod.git)",
  "dyon 0.28.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "rhai 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

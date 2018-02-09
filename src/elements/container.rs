@@ -9,45 +9,6 @@ use elements::*;
 
 
 
-pub enum Alignment {
-    Center,
-    TopLeft,
-    Top,
-    TopRight,
-    Right,
-    BottomRight,
-    Bottom,
-    BottomLeft,
-    Left,
-    Relative(f64,f64),
-}
-
-
-
-
-struct ListElement {
-    element: Box<Element>,
-    align: Alignment,
-    size: Vec2f64,
-    rel_pos: Vec2f64,
-}
-
-impl ListElement {
-    fn resize(&mut self, size: Vec2u32) {
-        let pix_size: Vec2u32 = (
-            (self.size.0 * size.0 as f64) as u32,
-            (self.size.1 * size.1 as f64) as u32
-        );
-        println!("ListElement: resize to pixel_size {:?}", pix_size);
-        self.element.resize(pix_size);
-    }
-    fn repos(&mut self, rel_pos: Vec2f64) {
-        println!("Listelement: repos to position {:?}", rel_pos);
-        self.rel_pos = rel_pos;
-    }
-}
-
-
 pub enum ListAlignment {
     Horizontal,
     Vertical,
@@ -55,21 +16,22 @@ pub enum ListAlignment {
 
 
 pub struct List {
-    elements: Vec<ListElement>,
-    pixel_size: Vec2u32,
-    pos: Vec2f64,
-    rel_separations: Vec<f64>,
+    elements: Vec<Box<Element>>,
+    rel_sep: Vec<f64>,
     alignment: ListAlignment,
+    frame: Frame<i32>,
+
+    global_center: Vec2<i32>,
 }
 
 impl List {
     pub fn new(alignment: ListAlignment) -> Self {
         List {
             elements: Vec::new(),
-            pixel_size:(100, 100),
-            pos: (0.0,0.0),
-            rel_separations: Vec::new(),
-            alignment
+            rel_sep: vec![0.0],
+            alignment,
+            frame: Frame::new(100,100),
+            global_center: Vec2::zero(),
         }
     }
 
@@ -78,75 +40,116 @@ impl List {
         self.add_element_at(element, N);
     }
 
-    pub fn add_element_at(&mut self, element: Box<Element>, index: usize) {
+    pub fn add_element_at(&mut self, mut element: Box<Element>, index: usize) {
+
+        element.set_window_center(self.global_center);
 
         let N = self.elements.len();
         let rel_sep = 1.0 / ((N+1) as f64);
-        let rescale = (N as f64)/((N+1) as f64);
+
+        let mut sep_sum = 0f64;
+        for ix in 0..N {
+            self.rel_sep[ix+1] *= rel_sep;
+            sep_sum += self.rel_sep[ix+1];
+        }
+        if index >= N {
+            self.rel_sep.push(sep_sum + rel_sep);
+        } else {
+            self.rel_sep.insert(index, sep_sum + rel_sep);
+        }
 
         match self.alignment {
             ListAlignment::Horizontal => {
-                for mut el in &mut self.elements {
-                    el.size.0 *= rescale;
-                    el.resize(self.pixel_size);
+                if index >= N {
+                    self.elements.push(element);
+                } else {
+                    self.elements.insert(index, element);
                 }
 
-                if index >= N {
-                    self.elements.push(ListElement{
-                        element, align: Alignment::Center, size: (rel_sep, 1f64)
+                let mut sum = 0f64;
+                for ix in 0..N {
+                    let el = &mut self.elements[ix];
+                    el.set_frame(Frame{
+                        p0: Vec2{x: ((self.rel_sep[ix]   + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: ((self.rel_sep[ix+1] + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
                     });
-                } else {
-                    self.elements.insert(index, ListElement{
-                        element, align: Alignment::Center, size: (rel_sep, 1f64)
-                    });
+                    sum += self.rel_sep[ix];
                 }
             },
             ListAlignment::Vertical => {
-                for mut el in &mut self.elements {
-                    el.size.1 *= rescale;
-                    el.resize(self.pixel_size);
+                if index >= N {
+                    self.elements.push(element);
+                } else {
+                    self.elements.insert(index, element);
                 }
 
-                if index >= N {
-                    self.elements.push(ListElement{
-                        element, align: Alignment::Center, size: (1f64, rel_sep)
+                let mut sum = 0f64;
+                for ix in 0..N {
+                    let el = &mut self.elements[ix];
+                    el.set_frame(Frame{
+                        p0: Vec2{x: self.frame.p0.x, y: ((self.rel_sep[ix]   + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: ((self.rel_sep[ix+1] + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y}
                     });
-                } else {
-                    self.elements.insert(index, ListElement{
-                        element, align: Alignment::Center, size: (1f64, rel_sep)
-                    });
+                    sum += self.rel_sep[ix];
                 }
             },
         }
+
+        println!("{:?}", self.rel_sep);
     }
 }
 
 impl Element for List {
     fn stop(&self) {
         for el in &self.elements {
-            el.element.stop();
+            el.stop();
         }
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
         for el in &self.elements {
-            el.element.build_window(ui);
+            el.build_window(ui);
         }
     }
 
-    fn get_size(&self) -> Vec2u32 {
-        self.pixel_size
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
     }
-    fn resize(&mut self, size: Vec2u32) {
-        self.pixel_size = size;
-        for el in &mut self.elements {
-            el.resize(size);
+    fn set_frame(&mut self, frame: Frame<i32>) {
+        self.frame = frame;
+
+        let N = self.elements.len();
+
+        match self.alignment {
+            ListAlignment::Horizontal => {
+                let mut sum = 0f64;
+                for ix in 0..N {
+                    let el = &mut self.elements[ix];
+                    el.set_frame(Frame{
+                        p0: Vec2{x: ((self.rel_sep[ix]   + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: ((self.rel_sep[ix+1] + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
+                    });
+                    sum += self.rel_sep[ix];
+                }
+            },
+            ListAlignment::Vertical => {
+                let mut sum = 0f64;
+                for ix in 0..N {
+                    let el = &mut self.elements[ix];
+                    el.set_frame(Frame{
+                        p0: Vec2{x: self.frame.p0.x, y: ((self.rel_sep[ix]   + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: ((self.rel_sep[ix+1] + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y}
+                    });
+                    sum += self.rel_sep[ix];
+                }
+            },
         }
     }
 
-    fn get_position(&self) -> Vec2f64 {
-        self.pos
-    }
-    fn reposition(&mut self, pos: Vec2f64) {
-        self.pos = pos;
+    fn set_window_center(&mut self, center: Vec2<i32>) {
+        self.global_center = center;
+        let N = self.elements.len();
+        for ix in 0..N {
+            self.elements[ix].set_window_center(center);
+        }
     }
 }

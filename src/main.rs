@@ -5,6 +5,7 @@ pub mod clock;
 
 #[macro_use] extern crate conrod;
 extern crate time;
+extern crate num;
 
 use std::thread;
 use std::sync::{Arc, RwLock};
@@ -32,18 +33,31 @@ fn main() {
         use clock::*;
         let mut base_window = BaseWindow::new("Clock".to_string(), 800, 600);
 
-        let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
-        base_window.add_element(Box::new(clock));
+        //let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
+        //base_window.add_element(Box::new(clock));
 
-        let mut grid = container::List::new(container::ListAlignment::Vertical);
-        grid.resize((300, 700));
-        grid.add_element(
+
+        let mut list = container::List::new(container::ListAlignment::Vertical);
+        list.set_frame(Frame::new(300, 700));
+        list.add_element(
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
         );
-        grid.add_element(
+
+        let mut sublist = container::List::new(container::ListAlignment::Horizontal);
+        sublist.set_frame(Frame::new(300,300));
+        sublist.add_element(
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
         );
-        base_window.add_element(Box::new(grid));
+        sublist.add_element(
+            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+        );
+
+
+        list.add_element(
+            Box::new(sublist)
+        );
+        base_window.add_element(Box::new(list));
+
 
         base_window.run(120f64);
     });

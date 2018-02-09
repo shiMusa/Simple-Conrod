@@ -8,3 +8,4 @@ conrod = {git = "https://github.com/PistonDevelopers/conrod.git", features=["win
 time = "*"
 rhai = "0.8.1"
 dyon = "*"
+num = "*"
