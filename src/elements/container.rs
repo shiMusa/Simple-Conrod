@@ -47,15 +47,15 @@ impl List {
         let N = self.elements.len();
         let rel_sep = 1.0 / ((N+1) as f64);
 
-        let mut sep_sum = 0f64;
         for ix in 0..N {
-            self.rel_sep[ix+1] *= rel_sep;
-            sep_sum += self.rel_sep[ix+1];
+            self.rel_sep[ix+1] *= ( (N as f64) * rel_sep );
         }
+        let last_sep = self.rel_sep[N];
+
         if index >= N {
-            self.rel_sep.push(sep_sum + rel_sep);
+            self.rel_sep.push(last_sep + rel_sep);
         } else {
-            self.rel_sep.insert(index, sep_sum + rel_sep);
+            self.rel_sep.insert(index, last_sep + rel_sep);
         }
 
         match self.alignment {
@@ -66,14 +66,12 @@ impl List {
                     self.elements.insert(index, element);
                 }
 
-                let mut sum = 0f64;
                 for ix in 0..N {
                     let el = &mut self.elements[ix];
                     el.set_frame(Frame{
-                        p0: Vec2{x: ((self.rel_sep[ix]   + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
-                        p1: Vec2{x: ((self.rel_sep[ix+1] + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
+                        p0: Vec2{x: (self.rel_sep[ix]   * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: (self.rel_sep[ix+1] * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
                     });
-                    sum += self.rel_sep[ix];
                 }
             },
             ListAlignment::Vertical => {
@@ -87,15 +85,13 @@ impl List {
                 for ix in 0..N {
                     let el = &mut self.elements[ix];
                     el.set_frame(Frame{
-                        p0: Vec2{x: self.frame.p0.x, y: ((self.rel_sep[ix]   + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y},
-                        p1: Vec2{x: self.frame.p1.x, y: ((self.rel_sep[ix+1] + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y}
+                        p0: Vec2{x: self.frame.p0.x, y: (self.rel_sep[ix]   * self.frame.height() as f64) as i32 + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: (self.rel_sep[ix+1] * self.frame.height() as f64) as i32 + self.frame.p0.y}
                     });
                     sum += self.rel_sep[ix];
                 }
             },
         }
-
-        println!("{:?}", self.rel_sep);
     }
 }
 
@@ -121,25 +117,21 @@ impl Element for List {
 
         match self.alignment {
             ListAlignment::Horizontal => {
-                let mut sum = 0f64;
                 for ix in 0..N {
                     let el = &mut self.elements[ix];
                     el.set_frame(Frame{
-                        p0: Vec2{x: ((self.rel_sep[ix]   + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
-                        p1: Vec2{x: ((self.rel_sep[ix+1] + sum) * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
+                        p0: Vec2{x: (self.rel_sep[ix]   * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: (self.rel_sep[ix+1] * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
                     });
-                    sum += self.rel_sep[ix];
                 }
             },
             ListAlignment::Vertical => {
-                let mut sum = 0f64;
                 for ix in 0..N {
                     let el = &mut self.elements[ix];
                     el.set_frame(Frame{
-                        p0: Vec2{x: self.frame.p0.x, y: ((self.rel_sep[ix]   + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y},
-                        p1: Vec2{x: self.frame.p1.x, y: ((self.rel_sep[ix+1] + sum) * self.frame.height() as f64) as i32 + self.frame.p0.y}
+                        p0: Vec2{x: self.frame.p0.x, y: (self.rel_sep[ix]   * self.frame.height() as f64) as i32 + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: (self.rel_sep[ix+1] * self.frame.height() as f64) as i32 + self.frame.p0.y}
                     });
-                    sum += self.rel_sep[ix];
                 }
             },
         }

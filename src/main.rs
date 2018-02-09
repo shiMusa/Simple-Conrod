@@ -42,9 +42,15 @@ fn main() {
         list.add_element(
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
         );
+        list.add_element(
+            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+        );
 
         let mut sublist = container::List::new(container::ListAlignment::Horizontal);
         sublist.set_frame(Frame::new(300,300));
+        sublist.add_element(
+            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+        );
         sublist.add_element(
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
         );
