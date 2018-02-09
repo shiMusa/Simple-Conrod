@@ -129,7 +129,7 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
-
+use std::i32;
 
 pub trait Element {
     fn stop(&self);
@@ -137,6 +137,13 @@ pub trait Element {
 
     fn get_frame(&self) -> Frame<i32>;
     fn set_frame(&mut self, frame: Frame<i32>);
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        Vec2::zero()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        Vec2{ x: i32::MAX, y: i32::MAX }
+    }
 
     fn set_window_center(&mut self, center: Vec2<i32>);
 }
