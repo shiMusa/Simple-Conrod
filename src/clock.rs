@@ -143,9 +143,9 @@ impl Element for Clock {
             t = *self.time.read().unwrap();
         }
 
-        let hours = (t/(60.0*60.0)) as u8;
-        let mins = (t/60.0) as u8;
-        let secs = t as u8 - 60*mins;
+        let hours = (t/(60.0*60.0)) as u8 % 24;
+        let mins = (t/60.0) as u8 % 60;
+        let secs = t as u8 % 60;
 
         let style = widget::primitive::shape::Style::outline_styled(
             widget::primitive::line::Style::solid().thickness(linewidth)
