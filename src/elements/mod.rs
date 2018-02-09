@@ -21,6 +21,13 @@ impl<T> Vec2<T> where T: Num + NumCast + PartialOrd + Copy {
             x: T::from(0).unwrap(), y: T::from(0).unwrap(),
         }
     }
+
+    pub fn el_mul(self, other: Vec2<T>) -> Vec2<T> {
+        Vec2{
+            x: self.x * other.x,
+            y: self.y * other.y
+        }
+    }
 }
 
 impl<T> Add for Vec2<T> where T: Num + NumCast + PartialOrd + Copy {
@@ -104,8 +111,24 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
     pub fn center(&self) -> Vec2<T> {
         (self.p1 + self.p0) / (T::from(2).unwrap())
     }
+    pub fn size(&self) -> Vec2<T> {
+        self.p1 - self.p0
+    }
     //pub fn center_left(&self) -> Vec2<T>
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 pub trait Element {

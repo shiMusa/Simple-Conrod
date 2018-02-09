@@ -143,3 +143,179 @@ impl Element for List {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+pub enum PadAlignment {
+    CenterRel(Vec2<f64>),
+    TopLeftRel(Vec2<f64>),
+    TopRel(Vec2<f64>),
+    TopRightRel(Vec2<f64>),
+    RightRel(Vec2<f64>),
+    BottomRightRel(Vec2<f64>),
+    BottomRel(Vec2<f64>),
+    BottomLeftRel(Vec2<f64>),
+    LeftRel(Vec2<f64>),
+
+    CenterAbs(Vec2<i32>),
+    TopLeftAbs(Vec2<i32>),
+    TopAbs(Vec2<i32>),
+    TopRightAbs(Vec2<i32>),
+    RightAbs(Vec2<i32>),
+    BottomRightAbs(Vec2<i32>),
+    BottomAbs(Vec2<i32>),
+    BottomLeftAbs(Vec2<i32>),
+    LeftAbs(Vec2<i32>),
+}
+
+
+pub struct Pad {
+    element: Box<Element>,
+    alignment: PadAlignment,
+
+    frame: Frame<i32>,
+    global_center: Vec2<i32>,
+}
+
+
+impl Pad {
+    pub fn new(element: Box<Element>, alignment: PadAlignment) -> Self {
+        Pad {
+            element, alignment, frame: Frame::new(100,100), global_center: Vec2::zero()
+        }
+    }
+}
+
+
+
+
+fn map_f64_to_i32(v: Vec2<f64>) -> Vec2<i32> {
+    Vec2{
+        x: v.x as i32,
+        y: v.y as i32,
+    }
+}
+
+impl Element for Pad {
+    fn stop(&self) {
+        self.element.stop();
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        self.element.build_window(ui);
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+    fn set_frame(&mut self, frame: Frame<i32>) {
+        self.frame = frame;
+        use self::PadAlignment::*;
+
+        println!("{:?}", self.frame);
+
+        // map relative values to absolute pixel
+        let s = {
+            let tmp = self.frame.size();
+            Vec2{ x: tmp.x as f64, y: tmp.y as f64}
+        };
+        let absv = match self.alignment {
+            CenterAbs(v) => CenterAbs(v),
+            TopLeftAbs(v) => TopLeftAbs(v),
+            TopAbs(v) => TopAbs(v),
+            TopRightAbs(v) => TopRightAbs(v),
+            RightAbs(v) => RightAbs(v),
+            BottomRightAbs(v) => BottomRightAbs(v),
+            BottomAbs(v) => BottomAbs(v),
+            BottomLeftAbs(v) => BottomLeftAbs(v),
+            LeftAbs(v) => LeftAbs(v),
+
+            CenterRel(v) => CenterAbs(map_f64_to_i32(v.el_mul(s))),
+            TopLeftRel(v) => TopLeftAbs(map_f64_to_i32(v.el_mul(s))),
+            TopRel(v) => TopAbs(map_f64_to_i32(v.el_mul(s))),
+            TopRightRel(v) => TopRightAbs(map_f64_to_i32(v.el_mul(s))),
+            RightRel(v) => RightAbs(map_f64_to_i32(v.el_mul(s))),
+            BottomRightRel(v) => BottomRightAbs(map_f64_to_i32(v.el_mul(s))),
+            BottomRel(v) => BottomAbs(map_f64_to_i32(v.el_mul(s))),
+            BottomLeftRel(v) => BottomLeftAbs(map_f64_to_i32(v.el_mul(s))),
+            LeftRel(v) => LeftAbs(map_f64_to_i32(v.el_mul(s))),
+        };
+
+
+
+        let frame: Frame<i32> = match absv {
+            CenterAbs(v) => {
+                let center = self.frame.center();
+                Frame{
+                    p0: center - v/2,
+                    p1: center + v/2,
+                }
+            },
+            BottomLeftAbs(v) => {
+                Frame {
+                    p0: self.frame.p0,
+                    p1: self.frame.p0 + v,
+                }
+            },
+            BottomAbs(v) => {
+                let midx = (self.frame.p1.x + self.frame.p0.x)/2;
+                Frame {
+                    p0: Vec2{x: midx - v.x/2, y: self.frame.p0.y},
+                    p1: Vec2{x: midx + v.x/2, y: self.frame.p0.y + v.y}
+                }
+            },
+            BottomRightAbs(v) => {
+                Frame {
+                    p0: Vec2{x: self.frame.p1.x - v.x, y: self.frame.p0.y},
+                    p1: Vec2{x: self.frame.p1.x, y: self.frame.p0.y + v.y}
+                }
+            },
+            RightAbs(v) => {
+                let midy = (self.frame.p1.y + self.frame.p0.y)/2;
+                Frame {
+                    p0: Vec2{x: self.frame.p1.x - v.x, y: midy - v.y/2},
+                    p1: Vec2{x: self.frame.p1.x, y: midy + v.y/2}
+                }
+            },
+            TopRightAbs(v) => {
+                Frame{
+                    p0: self.frame.p1 - v,
+                    p1: self.frame.p1,
+                }
+            },
+            TopAbs(v) => {
+                let midx = (self.frame.p1.x + self.frame.p0.x)/2;
+                Frame {
+                    p0: Vec2{x: midx - v.x/2, y: self.frame.p1.y - v.y},
+                    p1: Vec2{x: midx + v.x/2, y: self.frame.p1.y}
+                }
+            },
+            TopLeftAbs(v) => {
+                Frame{
+                    p0: Vec2{x: self.frame.p0.x, y: self.frame.p1.y - v.y},
+                    p1: Vec2{x: self.frame.p0.x + v.x, y: self.frame.p1.y},
+                }
+            },
+            LeftAbs(v) => {
+                let midy = (self.frame.p1.y + self.frame.p0.y)/2;
+                Frame {
+                    p0: Vec2{x: self.frame.p0.x, y: midy - v.y/2},
+                    p1: Vec2{x: self.frame.p0.x + v.x, y: midy + v.y/2}
+                }
+            },
+            _ => self.frame
+        };
+
+        self.element.set_frame(frame);
+    }
+
+    fn set_window_center(&mut self, center: Vec2<i32>) {
+        self.global_center = center;
+        self.element.set_window_center(center);
+    }
+}

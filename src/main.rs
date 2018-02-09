@@ -40,7 +40,10 @@ fn main() {
         let mut list = container::List::new(container::ListAlignment::Vertical);
         list.set_frame(Frame::new(300, 700));
         list.add_element(
-            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+            Box::new(container::Pad::new(
+                Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone())),
+                container::PadAlignment::TopLeftAbs(Vec2{x: 100i32, y: 100i32})
+            ))
         );
         list.add_element(
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
