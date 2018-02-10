@@ -42,7 +42,7 @@ fn main() {
         list.add_element(
             Box::new(container::Pad::new(
                 Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone())),
-                container::PadAlignment::TopLeftAbs(Vec2{x: 100i32, y: 100i32})
+                container::PadAlignment::TopLeftAbs(Vec2{x: 200i32, y: 200i32})
             ))
         );
         list.add_element(
@@ -58,7 +58,9 @@ fn main() {
             Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
         );
         sublist.add_element(
-            Box::new(Clock::new(base_window.get_ui(), time.clone(), clock_send.clone()))
+            Box::new(basic::Button::new( base_window.get_ui(), || {
+                println!("Button pressed.");
+            }))
         );
 
 

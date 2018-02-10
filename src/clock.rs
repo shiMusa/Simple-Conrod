@@ -214,6 +214,15 @@ impl Element for Clock {
         self.frame = frame;
     }
 
+    fn get_min_size(&self) -> Vec2<i32> {
+        Vec2{ x: 100, y: 100 }
+    }
+    /*
+    fn get_max_size(&self) -> Vec2<i32> {
+        Vec2{ x: i32::MAX, y: i32::MAX }
+    }
+    */
+
     fn set_window_center(&mut self, center: Vec2<i32>) {
         self.global_center = center;
     }

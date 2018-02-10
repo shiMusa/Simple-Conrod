@@ -1,6 +1,7 @@
 
 
 pub mod container;
+pub mod basic;
 
 
 use conrod;
@@ -132,7 +133,7 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 use std::i32;
 
 pub trait Element {
-    fn stop(&self);
+    fn stop(&self) {}
     fn build_window(&self, ui: &mut conrod::UiCell);
 
     fn get_frame(&self) -> Frame<i32>;
@@ -176,7 +177,7 @@ pub struct BaseWindow {
 
     window_center: Vec2<i32>,
 
-    elements: Vec<Box<Element>>,
+    element: Option<Box<Element>>,
 }
 
 impl BaseWindow {
@@ -188,7 +189,7 @@ impl BaseWindow {
 
     pub fn add_element(&mut self, mut element: Box<Element>) {
         element.set_window_center(self.window_center);
-        self.elements.push(element);
+        self.element = Some(element);
     }
 
 
@@ -232,7 +233,7 @@ impl BaseWindow {
             renderer,
             image_map,
             ui,
-            elements: Vec::new(),
+            element: None,
             window_center: Vec2{x: (width as f64/2f64) as i32, y: (height as f64/2f64) as i32}
         }
     }
@@ -272,12 +273,22 @@ impl BaseWindow {
                                 },
                                 ..
                             } => break 'render,
-                            WindowEvent::Resized(w,h) => {
+                            WindowEvent::Resized(mut w, mut h) => {
                                 //println!("resized: ({}, {})",w,h);
-                                self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
-                                for el in &mut self.elements {
+                                if let Some(ref mut el) = self.element {
+                                    let min = el.get_min_size();
+                                    let max = el.get_max_size();
+
+                                    if w > max.x as u32 { w = max.x as u32; }
+                                    if w < min.x as u32 { w = min.x as u32; }
+                                    if h > max.y as u32 { h = max.y as u32; }
+                                    if h < min.y as u32 { h = min.y as u32; }
+
+                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
                                     el.set_frame(Frame::new(w as i32,h as i32));
                                     el.set_window_center(self.window_center);
+                                } else {
+                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
                                 }
                             }
                             _ => (),
@@ -306,9 +317,8 @@ impl BaseWindow {
             }
 
             if update {
-                //println!("basw window updating....");
                 let ui = &mut self.ui.set_widgets();
-                for el in &self.elements {
+                if let Some(ref mut el) = self.element {
                     el.build_window(ui);
                 }
             }
@@ -323,7 +333,7 @@ impl BaseWindow {
             }
         }
 
-        for el in &self.elements {
+        if let Some(ref el) = self.element {
             el.stop();
         }
     }

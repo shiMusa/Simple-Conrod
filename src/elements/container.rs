@@ -135,6 +135,41 @@ impl Element for List {
         }
     }
 
+    fn get_min_size(&self) -> Vec2<i32> {
+        let mut min = Vec2::zero();
+        for el in &self.elements {
+            let tmp = el.get_min_size();
+            match self.alignment {
+                ListAlignment::Horizontal => {
+                    min.x += tmp.x;
+                    if min.y < tmp.y { min.y = tmp.y; }
+                },
+                ListAlignment::Vertical   => {
+                    min.y += tmp.y;
+                    if min.x < tmp.x { min.x = tmp.x; }
+                },
+            }
+        }
+        min
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        let mut max = Vec2::zero();
+        for el in &self.elements {
+            let tmp = el.get_max_size();
+            match self.alignment {
+                ListAlignment::Horizontal => {
+                    max.x += tmp.x;
+                    if max.y > tmp.y { max.y = tmp.y; }
+                },
+                ListAlignment::Vertical   => {
+                    max.y += tmp.y;
+                    if max.x < tmp.x { max.x = tmp.x; }
+                },
+            }
+        }
+        max
+    }
+
     fn set_window_center(&mut self, center: Vec2<i32>) {
         self.global_center = center;
         let n = self.elements.len();
@@ -310,6 +345,15 @@ impl Element for Pad {
         };
 
         self.element.set_frame(frame);
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        // TODO not yet correct. Need to consider relative size as well
+        self.element.get_min_size()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        // TODO not yet correct. Need to consider relative size as well
+        self.element.get_max_size()
     }
 
     fn set_window_center(&mut self, center: Vec2<i32>) {
