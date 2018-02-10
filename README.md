@@ -15,4 +15,5 @@ Plans:
  - Scientific plotting
  - implementing other backends (Gfx, glutin)
  
+Example can be found in main() function.
 
