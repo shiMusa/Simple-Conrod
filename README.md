@@ -13,5 +13,6 @@ BEWARE: I'm new to Rust, I'm not a professional programmer, I make mistakes - a 
 Plans:
  - many more Elements
  - Scientific plotting
+ - implementing other backends (Gfx, glutin)
  
 
