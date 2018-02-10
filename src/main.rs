@@ -11,42 +11,12 @@ use std::thread;
 use std::sync::{Arc, RwLock};
 use std::sync::mpsc::{self, Sender, Receiver};
 
+use elements::{self, container::*, basic::*};
+
 
 
 fn main() {
-    /*
-    use clock::*;
-
-    let (clock_send, clock_recv): (Sender<ClockMsg>, Receiver<ClockMsg>) =
-        mpsc::channel();
-    let time = Arc::new(RwLock::new(0.0));
-    let clock_core = clock::ClockCore::new(time.clone(),clock_recv);
-
-    let cl = thread::spawn(move || {
-        clock_core.run();
-    });
-
-
-    use clock;
-
-    let w2 = thread::spawn(move || {
-
-        let csend = clock_send.clone();
-
-
-    });
-    let _ = w2.join();
-    let _ = cl.join();
-    */
-
-
-    use elements::{self, container::*, basic::*};
-    //use clock::*;
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
-
-    //let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
-    //base_window.add_element(Box::new(clock));
-
 
     let mut list = List::new(ListAlignment::Vertical);
     list.set_frame(Frame::new(300, 700));
