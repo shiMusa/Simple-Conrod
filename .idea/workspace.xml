@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4c770e7a-a520-470f-9336-69268e58d6f7" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/src/clock.rs" afterPath="$PROJECT_DIR$/src/clock.rs" />
-      <change beforePath="$PROJECT_DIR$/src/elements/basic.rs" afterPath="$PROJECT_DIR$/src/elements/basic.rs" />
       <change beforePath="$PROJECT_DIR$/src/elements/container.rs" afterPath="$PROJECT_DIR$/src/elements/container.rs" />
-      <change beforePath="$PROJECT_DIR$/src/elements/mod.rs" afterPath="$PROJECT_DIR$/src/elements/mod.rs" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" afterPath="$PROJECT_DIR$/src/main.rs" />
     </list>
     <ignored path="$PROJECT_DIR$/target/" />
@@ -24,8 +21,8 @@
           <file leaf-file-name="main.rs" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/main.rs">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="2542">
-                  <caret line="94" column="22" lean-forward="true" selection-start-line="94" selection-start-column="22" selection-end-line="94" selection-end-column="22" />
+                <state relative-caret-position="1209">
+                  <caret line="90" column="38" lean-forward="true" selection-start-line="90" selection-start-column="38" selection-end-line="90" selection-end-column="38" />
                   <folding />
                 </state>
               </provider>
@@ -51,15 +48,15 @@
           <file leaf-file-name="container.rs" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/elements/container.rs">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="657">
-                  <caret line="293" column="65" lean-forward="false" selection-start-line="293" selection-start-column="65" selection-end-line="293" selection-end-column="65" />
+                <state relative-caret-position="471">
+                  <caret line="212" column="18" lean-forward="false" selection-start-line="212" selection-start-column="18" selection-end-line="212" selection-end-column="18" />
                   <folding>
                     <element signature="e#3014#3015#0" expanded="true" />
                     <element signature="e#3039#3040#0" expanded="true" />
-                    <element signature="e#6868#6869#0" expanded="true" />
-                    <element signature="e#6903#6904#0" expanded="true" />
-                    <element signature="e#7662#7663#0" expanded="true" />
-                    <element signature="e#7687#7688#0" expanded="true" />
+                    <element signature="e#6866#6867#0" expanded="true" />
+                    <element signature="e#6901#6902#0" expanded="true" />
+                    <element signature="e#7660#7661#0" expanded="true" />
+                    <element signature="e#7685#7686#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
@@ -96,16 +93,16 @@
             <entry file="file://$PROJECT_DIR$/src/elements/container.rs">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="-1281">
-                  <caret line="346" column="18" lean-forward="false" selection-start-line="346" selection-start-column="18" selection-end-line="346" selection-end-column="18" />
+                  <caret line="349" column="18" lean-forward="false" selection-start-line="349" selection-start-column="18" selection-end-line="349" selection-end-column="18" />
                   <folding>
                     <element signature="e#3014#3015#0" expanded="true" />
                     <element signature="e#3039#3040#0" expanded="true" />
-                    <element signature="e#6868#6869#0" expanded="true" />
-                    <element signature="e#6903#6904#0" expanded="true" />
-                    <element signature="e#6957#6958#0" expanded="true" />
-                    <element signature="e#7621#7622#0" expanded="true" />
-                    <element signature="e#7662#7663#0" expanded="true" />
-                    <element signature="e#7687#7688#0" expanded="true" />
+                    <element signature="e#6866#6867#0" expanded="true" />
+                    <element signature="e#6901#6902#0" expanded="true" />
+                    <element signature="e#6955#6956#0" expanded="true" />
+                    <element signature="e#7619#7620#0" expanded="true" />
+                    <element signature="e#7660#7661#0" expanded="true" />
+                    <element signature="e#7685#7686#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
@@ -187,9 +184,9 @@
         <option value="$PROJECT_DIR$/Cargo.toml" />
         <option value="$PROJECT_DIR$/src/clock.rs" />
         <option value="$PROJECT_DIR$/src/elements/basic.rs" />
-        <option value="$PROJECT_DIR$/src/elements/container.rs" />
         <option value="$PROJECT_DIR$/src/elements/mod.rs" />
         <option value="$PROJECT_DIR$/src/main.rs" />
+        <option value="$PROJECT_DIR$/src/elements/container.rs" />
       </list>
     </option>
   </component>
@@ -488,10 +485,10 @@
           <folding>
             <element signature="e#3014#3015#0" expanded="true" />
             <element signature="e#3039#3040#0" expanded="true" />
-            <element signature="e#6868#6869#0" expanded="true" />
-            <element signature="e#6903#6904#0" expanded="true" />
-            <element signature="e#7662#7663#0" expanded="true" />
-            <element signature="e#7687#7688#0" expanded="true" />
+            <element signature="e#6866#6867#0" expanded="true" />
+            <element signature="e#6901#6902#0" expanded="true" />
+            <element signature="e#7660#7661#0" expanded="true" />
+            <element signature="e#7685#7686#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -568,10 +565,10 @@
           <folding>
             <element signature="e#3014#3015#0" expanded="true" />
             <element signature="e#3039#3040#0" expanded="true" />
-            <element signature="e#6868#6869#0" expanded="true" />
-            <element signature="e#6903#6904#0" expanded="true" />
-            <element signature="e#7662#7663#0" expanded="true" />
-            <element signature="e#7687#7688#0" expanded="true" />
+            <element signature="e#6866#6867#0" expanded="true" />
+            <element signature="e#6901#6902#0" expanded="true" />
+            <element signature="e#7660#7661#0" expanded="true" />
+            <element signature="e#7685#7686#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -627,10 +624,10 @@
           <folding>
             <element signature="e#3014#3015#0" expanded="true" />
             <element signature="e#3039#3040#0" expanded="true" />
-            <element signature="e#6868#6869#0" expanded="true" />
-            <element signature="e#6903#6904#0" expanded="true" />
-            <element signature="e#7662#7663#0" expanded="true" />
-            <element signature="e#7687#7688#0" expanded="true" />
+            <element signature="e#6866#6867#0" expanded="true" />
+            <element signature="e#6901#6902#0" expanded="true" />
+            <element signature="e#7660#7661#0" expanded="true" />
+            <element signature="e#7685#7686#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -973,21 +970,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/elements/container.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="657">
-          <caret line="293" column="65" lean-forward="false" selection-start-line="293" selection-start-column="65" selection-end-line="293" selection-end-column="65" />
-          <folding>
-            <element signature="e#3014#3015#0" expanded="true" />
-            <element signature="e#3039#3040#0" expanded="true" />
-            <element signature="e#6868#6869#0" expanded="true" />
-            <element signature="e#6903#6904#0" expanded="true" />
-            <element signature="e#7662#7663#0" expanded="true" />
-            <element signature="e#7687#7688#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/elements/mod.rs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="533">
@@ -1009,10 +991,25 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/elements/container.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="471">
+          <caret line="212" column="18" lean-forward="false" selection-start-line="212" selection-start-column="18" selection-end-line="212" selection-end-column="18" />
+          <folding>
+            <element signature="e#3014#3015#0" expanded="true" />
+            <element signature="e#3039#3040#0" expanded="true" />
+            <element signature="e#6866#6867#0" expanded="true" />
+            <element signature="e#6901#6902#0" expanded="true" />
+            <element signature="e#7660#7661#0" expanded="true" />
+            <element signature="e#7685#7686#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main.rs">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2542">
-          <caret line="94" column="22" lean-forward="true" selection-start-line="94" selection-start-column="22" selection-end-line="94" selection-end-column="22" />
+        <state relative-caret-position="1209">
+          <caret line="90" column="38" lean-forward="true" selection-start-line="90" selection-start-column="38" selection-end-line="90" selection-end-column="38" />
           <folding />
         </state>
       </provider>

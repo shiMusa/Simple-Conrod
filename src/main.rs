@@ -49,7 +49,7 @@ fn main() {
                         println!("List -> Pad -> Button with const size");
                     })),
                 container::PadAlignment::TopLeft,
-                container::PadElementSize::Absolute(Vec2{x: 200, y: 200})
+                container::PadElementSize::Absolute(200, 200)
             ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
         );
         list.add_element(
@@ -76,7 +76,7 @@ fn main() {
                     }))
                     .with_label("Stop.".to_string()),
                 container::PadAlignment::Center,
-                container::PadElementSize::Relative(Vec2{x: 0.5, y: 0.5})
+                container::PadElementSize::Relative(0.5, 0.5)
             ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
         );
         sublist.add_element(

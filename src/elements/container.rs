@@ -210,8 +210,8 @@ impl Element for List {
 
 
 pub enum PadElementSize {
-    Absolute(Vec2<i32>),
-    Relative(Vec2<f64>),
+    Absolute(i32, i32),
+    Relative(f64, f64),
 }
 
 pub enum PadAlignment {
@@ -323,8 +323,11 @@ impl Element for Pad {
         };
 
         let mut v = match self.pad_size {
-            PadElementSize::Absolute(v) => v,
-            PadElementSize::Relative(v) => map_f64_to_i32(v.el_mul(s)),
+            PadElementSize::Absolute(x,y) => Vec2{x,y},
+            PadElementSize::Relative(x,y) => {
+                let v = Vec2{x,y};
+                map_f64_to_i32(v.el_mul(s))
+            },
         };
         if v.x < min.x { v.x = min.x; }
         if v.y < min.y { v.y = min.y; }
