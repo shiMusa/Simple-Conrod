@@ -1,7 +1,7 @@
 #![feature(duration_extras)]
 
 pub mod elements;
-pub mod clock;
+//pub mod clock;
 
 #[macro_use] extern crate conrod;
 extern crate time;
@@ -30,11 +30,16 @@ fn main() {
             PadElementSize::Absolute(200, 200)
         ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
     );
+
     list.add_element(
-        Button::new()
-            .with_action_click(Box::new(||{
-                println!("List -> Button");
-            }))
+        Pad::new(
+            Button::new()
+                .with_action_click(Box::new(||{
+                    println!("List -> Button");
+                })),
+            PadAlignment::Center,
+            PadElementSize::AbsoluteNeg(20,20)
+        )
     );
 
     let mut sublist = List::new(ListAlignment::Horizontal);
@@ -48,7 +53,7 @@ fn main() {
     sublist.add_element(
         Pad::new(
             Button::new()
-                .with_action_click(Box::new(move || {
+                .with_action_click(Box::new(|| {
                     println!("List -> List -> Pad -> Button");
                 }))
                 .with_label("Stop.".to_string()),

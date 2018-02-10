@@ -212,6 +212,8 @@ impl Element for List {
 pub enum PadElementSize {
     Absolute(i32, i32),
     Relative(f64, f64),
+    AbsoluteNeg(i32, i32),
+    RelativeNeg(f64, f64),
 }
 
 pub enum PadAlignment {
@@ -328,6 +330,14 @@ impl Element for Pad {
                 let v = Vec2{x,y};
                 map_f64_to_i32(v.el_mul(s))
             },
+            PadElementSize::AbsoluteNeg(x, y) => {
+                let s = self.frame.size();
+                Vec2{x: s.x - x, y: s.y - y}
+            },
+            PadElementSize::RelativeNeg(x, y) => {
+                let v = Vec2{x,y};
+                map_f64_to_i32(s - v.el_mul(s))
+            }
         };
         if v.x < min.x { v.x = min.x; }
         if v.y < min.y { v.y = min.y; }
