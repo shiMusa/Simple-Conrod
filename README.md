@@ -1,6 +1,8 @@
 # Simple-Conrod
 simple and user-friendly gui framework
 
+<b>heavy WIP!</b>
+
 The main goal is
  - a simple interface for users, especially for beginners and intermediates
  - not necessary performance, but ease of understanding
@@ -8,7 +10,7 @@ The main goal is
  
 Main inspiration: Java framework.
  
-BEWARE: I'm new to Rust, I'm not a professional programmer, I make mistakes - a lot...
+<b>BEWARE:</b> I'm new to Rust, I'm not a professional programmer, I make mistakes - a lot...
  
 Plans:
  - many more Elements
