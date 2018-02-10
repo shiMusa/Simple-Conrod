@@ -133,6 +133,8 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 use std::i32;
 
 pub trait Element {
+    fn setup(&mut self, ui: &mut conrod::Ui);
+
     fn stop(&self) {}
     fn build_window(&self, ui: &mut conrod::UiCell);
 
@@ -151,7 +153,24 @@ pub trait Element {
 
 
 
+pub trait Clickable {
+    fn with_action_click(self, fun: Box<Fn()>) -> Box<Self>;
+}
 
+pub trait Labelable {
+    fn with_label(self, label: String) -> Box<Self>;
+}
+
+
+
+pub enum Background {
+    None,
+    Color(conrod::Color),
+}
+
+pub trait Backgroundable {
+    fn with_background(self, bg: Background) -> Box<Self>;
+}
 
 
 
@@ -182,9 +201,17 @@ pub struct BaseWindow {
 
 impl BaseWindow {
 
+    fn setup(&mut self) {
+        if let Some(ref mut el) = self.element {
+            el.setup(&mut self.ui);
+        }
+    }
+
+    /*
     pub fn get_ui(&mut self) -> &mut conrod::Ui {
         &mut self.ui
     }
+    */
 
 
     pub fn add_element(&mut self, mut element: Box<Element>) {
@@ -239,6 +266,9 @@ impl BaseWindow {
     }
 
     pub fn run(&mut self, fps: f64) {
+
+        self.setup();
+
         let dt_ns = (1.0e9/fps) as u64;
 
         // events

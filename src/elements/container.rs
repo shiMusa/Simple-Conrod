@@ -25,14 +25,14 @@ pub struct List {
 }
 
 impl List {
-    pub fn new(alignment: ListAlignment) -> Self {
-        List {
+    pub fn new(alignment: ListAlignment) -> Box<Self> {
+        Box::new(List {
             elements: Vec::new(),
             rel_sep: vec![0.0],
             alignment,
             frame: Frame::new(100,100),
             global_center: Vec2::zero(),
-        }
+        })
     }
 
     pub fn add_element(&mut self, element: Box<Element>) {
@@ -94,6 +94,12 @@ impl List {
 }
 
 impl Element for List {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        for el in &mut self.elements {
+            el.setup(ui);
+        }
+    }
+
     fn stop(&self) {
         for el in &self.elements {
             el.stop();
@@ -187,43 +193,77 @@ impl Element for List {
 
 
 
-pub enum PadAlignment {
-    CenterRel(Vec2<f64>),
-    TopLeftRel(Vec2<f64>),
-    TopRel(Vec2<f64>),
-    TopRightRel(Vec2<f64>),
-    RightRel(Vec2<f64>),
-    BottomRightRel(Vec2<f64>),
-    BottomRel(Vec2<f64>),
-    BottomLeftRel(Vec2<f64>),
-    LeftRel(Vec2<f64>),
 
-    CenterAbs(Vec2<i32>),
-    TopLeftAbs(Vec2<i32>),
-    TopAbs(Vec2<i32>),
-    TopRightAbs(Vec2<i32>),
-    RightAbs(Vec2<i32>),
-    BottomRightAbs(Vec2<i32>),
-    BottomAbs(Vec2<i32>),
-    BottomLeftAbs(Vec2<i32>),
-    LeftAbs(Vec2<i32>),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub enum PadElementSize {
+    Absolute(Vec2<i32>),
+    Relative(Vec2<f64>),
 }
+
+pub enum PadAlignment {
+    Center,
+    TopLeft,
+    Top,
+    TopRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft,
+    Left,
+}
+
+widget_ids!(
+    struct PadIds {
+        background,
+    }
+);
 
 
 pub struct Pad {
     element: Box<Element>,
+    pad_size: PadElementSize,
     alignment: PadAlignment,
 
     frame: Frame<i32>,
     global_center: Vec2<i32>,
+
+    ids: Option<PadIds>,
+    background: Background,
 }
 
 
 impl Pad {
-    pub fn new(element: Box<Element>, alignment: PadAlignment) -> Self {
-        Pad {
-            element, alignment, frame: Frame::new(100,100), global_center: Vec2::zero()
-        }
+    pub fn new(element: Box<Element>, alignment: PadAlignment, size: PadElementSize) -> Box<Self> {
+        Box::new(Pad {
+            element,
+            alignment,
+            pad_size: size,
+            frame: Frame::new(100,100),
+            global_center: Vec2::zero(),
+            ids: None,
+            background: Background::None,
+        })
+    }
+}
+
+impl Backgroundable for Pad {
+    fn with_background(mut self, bg: Background) -> Box<Self> {
+        self.background = bg;
+        Box::new(self)
     }
 }
 
@@ -238,11 +278,33 @@ fn map_f64_to_i32(v: Vec2<f64>) -> Vec2<i32> {
 }
 
 impl Element for Pad {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.ids = Some(PadIds::new(ui.widget_id_generator()));
+        self.element.setup(ui);
+    }
+
     fn stop(&self) {
         self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.element.build_window(ui);
+        use conrod::{Widget, Positionable};
+
+        if let Some(ref ids) = self.ids {
+
+            let center = self.frame.center() - self.global_center;
+
+            match self.background {
+                Background::None => (),
+                Background::Color(color) => {
+                    let mut rect = conrod::widget::Rectangle::fill_with(
+                        [self.frame.width() as f64, self.frame.height() as f64],
+                        color
+                    ).x_y(center.x as f64, center.y as f64);
+                    rect.set(ids.background, ui);
+                }
+            }
+            self.element.build_window(ui);
+        }
     }
 
     fn get_frame(&self) -> Frame<i32> {
@@ -252,89 +314,76 @@ impl Element for Pad {
         self.frame = frame;
         use self::PadAlignment::*;
 
+        let min = self.element.get_min_size();
+
         // map relative values to absolute pixel
         let s = {
             let tmp = self.frame.size();
             Vec2{ x: tmp.x as f64, y: tmp.y as f64}
         };
-        let absv = match self.alignment {
-            CenterAbs(v) => CenterAbs(v),
-            TopLeftAbs(v) => TopLeftAbs(v),
-            TopAbs(v) => TopAbs(v),
-            TopRightAbs(v) => TopRightAbs(v),
-            RightAbs(v) => RightAbs(v),
-            BottomRightAbs(v) => BottomRightAbs(v),
-            BottomAbs(v) => BottomAbs(v),
-            BottomLeftAbs(v) => BottomLeftAbs(v),
-            LeftAbs(v) => LeftAbs(v),
 
-            CenterRel(v) => CenterAbs(map_f64_to_i32(v.el_mul(s))),
-            TopLeftRel(v) => TopLeftAbs(map_f64_to_i32(v.el_mul(s))),
-            TopRel(v) => TopAbs(map_f64_to_i32(v.el_mul(s))),
-            TopRightRel(v) => TopRightAbs(map_f64_to_i32(v.el_mul(s))),
-            RightRel(v) => RightAbs(map_f64_to_i32(v.el_mul(s))),
-            BottomRightRel(v) => BottomRightAbs(map_f64_to_i32(v.el_mul(s))),
-            BottomRel(v) => BottomAbs(map_f64_to_i32(v.el_mul(s))),
-            BottomLeftRel(v) => BottomLeftAbs(map_f64_to_i32(v.el_mul(s))),
-            LeftRel(v) => LeftAbs(map_f64_to_i32(v.el_mul(s))),
+        let mut v = match self.pad_size {
+            PadElementSize::Absolute(v) => v,
+            PadElementSize::Relative(v) => map_f64_to_i32(v.el_mul(s)),
         };
+        if v.x < min.x { v.x = min.x; }
+        if v.y < min.y { v.y = min.y; }
 
+        let center = self.frame.center();
 
-
-        let frame: Frame<i32> = match absv {
-            CenterAbs(v) => {
-                let center = self.frame.center();
+        let frame: Frame<i32> = match self.alignment {
+            Center => {
                 Frame{
                     p0: center - v/2,
                     p1: center + v/2,
                 }
             },
-            BottomLeftAbs(v) => {
+            BottomLeft => {
                 Frame {
                     p0: self.frame.p0,
                     p1: self.frame.p0 + v,
                 }
             },
-            BottomAbs(v) => {
+            Bottom => {
                 let midx = (self.frame.p1.x + self.frame.p0.x)/2;
                 Frame {
                     p0: Vec2{x: midx - v.x/2, y: self.frame.p0.y},
                     p1: Vec2{x: midx + v.x/2, y: self.frame.p0.y + v.y}
                 }
             },
-            BottomRightAbs(v) => {
+            BottomRight => {
                 Frame {
                     p0: Vec2{x: self.frame.p1.x - v.x, y: self.frame.p0.y},
                     p1: Vec2{x: self.frame.p1.x, y: self.frame.p0.y + v.y}
                 }
             },
-            RightAbs(v) => {
+            Right => {
                 let midy = (self.frame.p1.y + self.frame.p0.y)/2;
                 Frame {
                     p0: Vec2{x: self.frame.p1.x - v.x, y: midy - v.y/2},
                     p1: Vec2{x: self.frame.p1.x, y: midy + v.y/2}
                 }
             },
-            TopRightAbs(v) => {
+            TopRight => {
                 Frame{
                     p0: self.frame.p1 - v,
                     p1: self.frame.p1,
                 }
             },
-            TopAbs(v) => {
+            Top => {
                 let midx = (self.frame.p1.x + self.frame.p0.x)/2;
                 Frame {
                     p0: Vec2{x: midx - v.x/2, y: self.frame.p1.y - v.y},
                     p1: Vec2{x: midx + v.x/2, y: self.frame.p1.y}
                 }
             },
-            TopLeftAbs(v) => {
+            TopLeft => {
                 Frame{
                     p0: Vec2{x: self.frame.p0.x, y: self.frame.p1.y - v.y},
                     p1: Vec2{x: self.frame.p0.x + v.x, y: self.frame.p1.y},
                 }
             },
-            LeftAbs(v) => {
+            Left => {
                 let midy = (self.frame.p1.y + self.frame.p0.y)/2;
                 Frame {
                     p0: Vec2{x: self.frame.p0.x, y: midy - v.y/2},

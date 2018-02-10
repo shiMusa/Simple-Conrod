@@ -45,7 +45,10 @@ impl ClockCore {
         loop {
             match self.receiver.try_recv() {
                 Ok(msg) => match msg {
-                    ClockMsg::Stop => break,
+                    ClockMsg::Stop => {
+                        println!("ClockCore stopped.");
+                        break
+                    },
                     //_ => (),
                 },
                 Err(_e) => ()
@@ -80,7 +83,7 @@ impl ClockCore {
 
 
 
-
+/*
 
 
 widget_ids!(
@@ -227,3 +230,5 @@ impl Element for Clock {
         self.global_center = center;
     }
 }
+
+*/
