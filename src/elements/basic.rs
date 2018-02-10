@@ -11,15 +11,50 @@ use elements::*;
 
 
 
+
+
+
+
+pub struct LabelText {
+    text: String,
+    size: u32,
+}
+
+impl LabelText {
+    pub fn new(text: String, size: u32) -> Self {
+        LabelText { text, size }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 widget_ids!(
     struct ButtonIds {
         button,
     }
 );
-
-
-
-
 
 
 
