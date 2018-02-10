@@ -1,5 +1,5 @@
 # Simple-Conrod
-simple and user-friendly gui framework
+simple and user-friendly gui framework <b>Rust</b> based on <b>Conrod</b>
 
 <b>heavy WIP!</b>
 
