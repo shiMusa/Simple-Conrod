@@ -14,6 +14,7 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 
 fn main() {
+    /*
     use clock::*;
 
     let (clock_send, clock_recv): (Sender<ClockMsg>, Receiver<ClockMsg>) =
@@ -32,68 +33,71 @@ fn main() {
 
         let csend = clock_send.clone();
 
-        use elements::*;
-        use clock::*;
-        let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
 
-        //let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
-        //base_window.add_element(Box::new(clock));
-
-
-        let mut list = container::List::new(container::ListAlignment::Vertical);
-        list.set_frame(Frame::new(300, 700));
-        list.add_element(
-            container::Pad::new(
-                basic::Button::new()
-                    .with_action_click( Box::new(|| {
-                        println!("List -> Pad -> Button with const size");
-                    })),
-                container::PadAlignment::TopLeft,
-                container::PadElementSize::Absolute(200, 200)
-            ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
-        );
-        list.add_element(
-            basic::Button::new()
-                .with_action_click(Box::new(||{
-                    println!("List -> Button");
-                }))
-        );
-
-        let mut sublist = container::List::new(container::ListAlignment::Horizontal);
-        sublist.set_frame(Frame::new(300,300));
-        sublist.add_element(
-            basic::Button::new()
-                .with_action_click(Box::new(|| {
-                    println!("List -> List -> Button 1")
-                })),
-        );
-        sublist.add_element(
-            container::Pad::new(
-                basic::Button::new()
-                    .with_action_click(Box::new(move || {
-                        println!("List -> List -> Pad -> Button");
-                        let _ = csend.send(ClockMsg::Stop);
-                    }))
-                    .with_label("Stop.".to_string()),
-                container::PadAlignment::Center,
-                container::PadElementSize::Relative(0.5, 0.5)
-            ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
-        );
-        sublist.add_element(
-            basic::Button::new()
-                .with_action_click(Box::new(|| {
-                    println!("List -> List -> Button 2");
-                }))
-        );
-
-
-        list.add_element(sublist);
-        base_window.add_element(list);
-
-        base_window.run(0f64);
     });
     let _ = w2.join();
     let _ = cl.join();
+    */
+
+
+    use elements::*;
+    use clock::*;
+    let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
+
+    //let clock = Clock::new(base_window.get_ui(), time.clone(), clock_send.clone());
+    //base_window.add_element(Box::new(clock));
+
+
+    let mut list = container::List::new(container::ListAlignment::Vertical);
+    list.set_frame(Frame::new(300, 700));
+    list.add_element(
+        container::Pad::new(
+            basic::Button::new()
+                .with_action_click( Box::new(|| {
+                    println!("List -> Pad -> Button with const size");
+                })),
+            container::PadAlignment::TopLeft,
+            container::PadElementSize::Absolute(200, 200)
+        ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
+    );
+    list.add_element(
+        basic::Button::new()
+            .with_action_click(Box::new(||{
+                println!("List -> Button");
+            }))
+    );
+
+    let mut sublist = container::List::new(container::ListAlignment::Horizontal);
+    sublist.set_frame(Frame::new(300,300));
+    sublist.add_element(
+        basic::Button::new()
+            .with_action_click(Box::new(|| {
+                println!("List -> List -> Button 1")
+            })),
+    );
+    sublist.add_element(
+        container::Pad::new(
+            basic::Button::new()
+                .with_action_click(Box::new(move || {
+                    println!("List -> List -> Pad -> Button");
+                }))
+                .with_label("Stop.".to_string()),
+            container::PadAlignment::Center,
+            container::PadElementSize::Relative(0.5, 0.5)
+        ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
+    );
+    sublist.add_element(
+        basic::Button::new()
+            .with_action_click(Box::new(|| {
+                println!("List -> List -> Button 2");
+            }))
+    );
+
+
+    list.add_element(sublist);
+    base_window.add_element(list);
+
+    base_window.run(0f64);
 }
 
 
