@@ -36,6 +36,9 @@ fn main() {
     ));
     println!("{:?}", ring);
 
+    ring.resize(1000);
+    println!("{:?}", ring);
+
 
 
 

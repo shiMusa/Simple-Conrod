@@ -15,7 +15,7 @@ use std::fmt::{Debug, Formatter, Result};
 
 
 
-static DEBUG: bool = false;
+const DEBUG: bool = false;
 
 
 
@@ -86,9 +86,29 @@ impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
         )
     }
 
+    pub fn get_min(&self, cmp: T) -> T {
+        let min = self.min.to_value(cmp);
+        let max = self.max.to_value(cmp);
+
+        if max < min { return max; }
+        min
+    }
+
+    pub fn get_max(&self, cmp: T) -> T {
+        let min = self.min.to_value(cmp);
+        let max = self.max.to_value(cmp);
+
+        if max < min { return min; }
+        max
+    }
+
+    pub fn get_size(&self, cmp: T) -> T {
+        self.size.to_value(cmp)
+    }
+
     pub fn is_at_max(&self, cmp: T) -> bool {
         let size = self.size.to_value(cmp);
-        let max = self.max.to_value(cmp);
+        let max = self.get_max(cmp);
 
         if DEBUG {
             println!("is at max? size {:?}, max {:?}", size, max);
@@ -103,14 +123,22 @@ impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
         }
     }
 
-    pub fn shrink_to_min(&mut self) {
-        if DEBUG { println!("shrinking size {:?} to min {:?}", self.size, self.min);}
-        self.size = self.min;
+    pub fn shrink_to_min(&mut self, cmp: T) {
+        if DEBUG {
+            println!("shrinking size {:?} to min {:?}", self.size, self.min);
+        }
+
+        self.size = if self.get_min(cmp) > self.get_max(cmp) {
+            if DEBUG { println!("min > max, so set to max");}
+            self.max
+        } else {
+            self.min
+        };
         if DEBUG { println!("shrinked? size {:?} to min {:?}", self.size, self.min);}
     }
 
     pub fn grow(&mut self, cmp: T, grow_by: T) -> T {
-        if DEBUG { println!("growing size {:?}, max {:?} by {:?}", self.size.to_value(cmp), self.max.to_value(cmp), grow_by);}
+        if DEBUG { println!("growing size {:?}, max {:?} by {:?}", self.size.to_value(cmp), self.get_max(cmp), grow_by);}
         if self.is_at_max(cmp) {
             if DEBUG { println!("cannot grow. already at max.");}
             return grow_by
@@ -119,9 +147,9 @@ impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
         self.size = RingElementSize::Absolute(s + grow_by);
 
         if self.is_at_max(cmp) {
-            let rem = self.size.to_value(cmp) - self.max.to_value(cmp);
+            let rem = self.size.to_value(cmp) - self.get_max(cmp);
             self.size = self.max;
-            if DEBUG { println!("grown? size {:?}, max {:?}, rem {:?}", self.size.to_value(cmp), self.max.to_value(cmp), rem);}
+            if DEBUG { println!("grown? size {:?}, max {:?}, rem {:?}", self.size.to_value(cmp), self.get_max(cmp), rem);}
             return rem;
         }
         if DEBUG { println!("everything absorbed.");}
@@ -173,14 +201,14 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         let mut min = T::from(0).unwrap();
 
         for el in &self.elements {
-            min = min + el.min.to_value(self.size);
+            min = min + el.get_min(self.size);
         }
         if DEBUG { println!("minimal size for all elements {:?}", min);}
-        let mut rem = self.size - min;
-
-        let elmin = element.min.to_value(self.size);
+        let rem = self.size - min;
 
         if DEBUG {
+            let elmin = element.get_min(self.size);
+
             if rem < elmin {
                 println!("ERROR: Cannot insert element into Ring: no size left. Ignoring insert...");
                 println!("       size left: {:?}, min size of element: {:?}", rem, elmin);
@@ -192,7 +220,7 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         }
 
         // add element since possible
-        rem = rem - element.min.to_value(self.size);
+        //rem = rem - element.min.to_value(self.size);
 
         if index >= self.elements.len() {
             self.elements.push(element);
@@ -200,36 +228,63 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
             self.elements.insert(index, element);
         }
 
+        self.rescale_elements();
+    }
 
+    pub fn resize(&mut self, size: T) {
+        self.size = size;
+        self.rescale_elements();
+    }
 
+    fn rescale_elements(&mut self) {
         let num = self.elements.len();
 
         // shrink all elements before expanding again
-        self.buffer.shrink_to_min();
+        self.buffer.shrink_to_min(self.size);
+        let mut min = T::from(0).unwrap();
         for el in &mut self.elements {
-            el.shrink_to_min();
+            el.shrink_to_min(self.size);
+            if DEBUG { println!("{:?}", el); }
+            min = min + el.get_min(self.size);
         }
+        let mut rem = self.size - min;
 
         // gradually expand as long as there is space left
         if DEBUG { println!("starting remnant {:?}", rem);}
+        let mut num_growable = num;
+
+        let mut checked = Vec::with_capacity(num);
+        for _ in 0..num { checked.push(false); }
 
         while rem > T::from(0).unwrap() {
+            if DEBUG { println!(" --- loop --- {}", num_growable);}
+
             // calculate remnant space in this iteration and the amount to grow
             // TODO implement weights for each element
-            let rem_grow = T::from( rem.to_f64().unwrap() / num as f64).unwrap();
-            rem = T::from(0).unwrap();
+            let rem_grow = T::from( rem.to_f64().unwrap() / (num_growable as f64)).unwrap();
 
             // grow and store leftover
+            let mut el_size = T::from(0).unwrap();
             for k in 0..num {
-                rem = rem + self.elements[k].grow(self.size, rem_grow);
+                let el = &mut self.elements[k];
+                if !checked[k] {
+                    el.grow(self.size, rem_grow);
+                }
+                el_size = el_size + el.get_size(self.size);
             }
+            rem = self.size - el_size;
             if DEBUG { println!("    remnant {:?}", rem);}
 
             // all max_sizes reached?
             let mut all_max = true;
-            for el in &self.elements {
-                if !el.is_at_max(self.size) {
+            num_growable = num;
+            for k in 0..num {
+                let el = &mut self.elements[k];
+                if !checked[k] && !el.is_at_max(self.size) {
                     all_max = false;
+                } else {
+                    checked[k] = true;
+                    num_growable -= 1;
                 }
             }
             if all_max {
