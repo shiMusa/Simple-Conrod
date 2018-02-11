@@ -3,6 +3,9 @@ simple and user-friendly gui framework <b>Rust</b> based on <b>Conrod</b>
 
 <b>heavy WIP!</b>
 
+![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example.PNG)
+![example application resized](https://github.com/shiMusa/Simple-Conrod/blob/master/example2.PNG)
+
 The main goal is
  - a simple interface for users, especially for beginners and intermediates
  - not necessary performance, but ease of understanding
