@@ -1,5 +1,5 @@
 # Simple-Conrod
-simple and user-friendly gui framework <b>Rust</b> based on <b>Conrod</b>
+simple and user-friendly gui framework in <b>Rust</b> based on <b>Conrod</b>
 
 <b>heavy WIP!</b>
 
@@ -17,7 +17,8 @@ Main inspiration: Java framework.
  
 Plans:
  - many more Elements
- - Scientific plotting
+ - gui animations
+ - scientific plotting
  - implementing other backends (Gfx, glutin)
  
 Example can be found in main() function.
