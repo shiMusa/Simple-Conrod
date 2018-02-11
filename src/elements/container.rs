@@ -269,16 +269,6 @@ impl Backgroundable for Pad {
     }
 }
 
-
-
-
-fn map_f64_to_i32(v: Vec2<f64>) -> Vec2<i32> {
-    Vec2{
-        x: v.x as i32,
-        y: v.y as i32,
-    }
-}
-
 impl Element for Pad {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.ids = Some(PadIds::new(ui.widget_id_generator()));
@@ -328,7 +318,8 @@ impl Element for Pad {
             PadElementSize::Absolute(x,y) => Vec2{x,y},
             PadElementSize::Relative(x,y) => {
                 let v = Vec2{x,y};
-                map_f64_to_i32(v.el_mul(s))
+                let v2 =v.el_mul(s);
+                Vec2{ x: v2.x as i32, y: v2.y as i32 }
             },
             PadElementSize::AbsoluteNeg(x, y) => {
                 let s = self.frame.size();
@@ -336,7 +327,8 @@ impl Element for Pad {
             },
             PadElementSize::RelativeNeg(x, y) => {
                 let v = Vec2{x,y};
-                map_f64_to_i32(s - v.el_mul(s))
+                let v2 = s - v.el_mul(s);
+                Vec2{x: v2.x as i32, y: v2.y as i32}
             }
         };
         if v.x < min.x { v.x = min.x; }
@@ -411,10 +403,12 @@ impl Element for Pad {
 
     fn get_min_size(&self) -> Vec2<i32> {
         // TODO not yet correct. Need to consider relative size as well
+        // TODO ... maybe not?
         self.element.get_min_size()
     }
     fn get_max_size(&self) -> Vec2<i32> {
         // TODO not yet correct. Need to consider relative size as well
+        // TODO ... maybe not?
         self.element.get_max_size()
     }
 

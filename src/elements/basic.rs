@@ -112,7 +112,7 @@ impl Element for Button {
     }
 
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        use conrod::{widget, Positionable, Colorable, Widget, Sizeable, Labelable};
+        use conrod::{widget, Positionable, Colorable, Widget, Sizeable, Labelable, Borderable};
 
         if let Some(ref ids) = self.button_ids {
             let c = self.frame.center()-self.global_center;
@@ -120,7 +120,8 @@ impl Element for Button {
             let mut button = widget::Button::new()
                 .color(self.color)
                 .x_y(c.x as f64, c.y as f64)
-                .w_h(self.frame.width() as f64,self.frame.height() as f64);
+                .w_h(self.frame.width() as f64,self.frame.height() as f64)
+                .border(0f64);
 
             if let Some(ref label) = self.label {
                 button = button.label(&label);

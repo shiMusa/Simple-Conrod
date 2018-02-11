@@ -85,6 +85,15 @@ impl<T> Mul<T> for Vec2<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
+
+
+
+
+
+
+
+
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Frame<T> where  T: Num + NumCast + PartialOrd + Copy {
     pub p0: Vec2<T>, pub p1: Vec2<T>,
@@ -117,6 +126,14 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
     }
     //pub fn center_left(&self) -> Vec2<T>
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -171,6 +188,17 @@ pub enum Background {
 pub trait Backgroundable {
     fn with_background(self, bg: Background) -> Box<Self>;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
