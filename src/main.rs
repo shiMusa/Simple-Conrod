@@ -11,6 +11,36 @@ use elements::{*, container::*, basic::*};
 
 
 fn main() {
+
+
+    // testing the Ring system...
+    // why is this not part of the std library???
+    let mut ring: Ring<i32> = Ring::new_with_size(100);
+    println!("{:?}", ring);
+
+    ring.push(RingElement::new_with_min_max(
+        RingElementSize::Relative(0.1),
+        RingElementSize::Absolute(80)
+    ));
+    println!("{:?}", ring);
+
+    ring.push(RingElement::new_with_min_max(
+        RingElementSize::Relative(0.5),
+        RingElementSize::Relative(1.0)
+    ));
+    println!("{:?}", ring);
+
+    ring.insert(0, RingElement::new_with_min_max(
+        RingElementSize::Absolute(10),
+        RingElementSize::Absolute(20)
+    ));
+    println!("{:?}", ring);
+
+
+
+
+
+
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
 
     let mut list = List::new(ListAlignment::Vertical);
@@ -65,7 +95,7 @@ fn main() {
     list.add_element(sublist);
     base_window.add_element(list);
 
-    base_window.run(0f64);
+    base_window.run(-1f64);
 }
 
 

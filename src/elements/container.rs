@@ -9,9 +9,49 @@ use elements::*;
 
 
 
+pub struct Empty {
+    frame: Frame<i32>
+}
+impl Empty {
+    pub fn new() -> Box<Self> {
+        Box::new(Empty{frame: Frame::new(0,0)})
+    }
+}
+impl Element for Empty {
+    fn setup(&mut self, _ui: &mut conrod::Ui) {}
+    fn build_window(&self, _ui: &mut conrod::UiCell) {}
+
+    fn get_frame(&self) -> Frame<i32> { self.frame }
+    fn set_frame(&mut self, frame: Frame<i32>) {
+        self.frame = frame;
+    }
+
+    fn set_window_center(&mut self, _center: Vec2<i32>) {}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub enum ListAlignment {
     Horizontal,
     Vertical,
+}
+
+pub enum ListElementSize {
+    Weight(f64),
+    Absolute(i32),
 }
 
 
@@ -19,25 +59,27 @@ pub struct List {
     elements: Vec<Box<Element>>,
     rel_sep: Vec<f64>,
     alignment: ListAlignment,
-    frame: Frame<i32>,
 
+    frame: Frame<i32>,
     global_center: Vec2<i32>,
 }
 
 impl List {
     pub fn new(alignment: ListAlignment) -> Box<Self> {
-        Box::new(List {
+        let mut list = Box::new(List {
             elements: Vec::new(),
             rel_sep: vec![0.0],
             alignment,
             frame: Frame::new(100,100),
             global_center: Vec2::zero(),
-        })
+        });
+        list.add_element(Empty::new());
+        list
     }
 
     pub fn add_element(&mut self, element: Box<Element>) {
-        let n = self.elements.len();
-        self.add_element_at(element, n);
+        //let n = self.elements.len();
+        self.add_element_at(element, 0);
     }
 
     pub fn add_element_at(&mut self, mut element: Box<Element>, index: usize) {
@@ -48,6 +90,8 @@ impl List {
         let rel_sep = 1.0 / ((n+1) as f64);
 
         for ix in 0..n {
+            // first entry is always 0!!!
+            // so start with second entry
             self.rel_sep[ix+1] *=  n as f64 * rel_sep;
         }
         let last_sep = self.rel_sep[n];
@@ -55,7 +99,8 @@ impl List {
         if index >= n {
             self.rel_sep.push(last_sep + rel_sep);
         } else {
-            self.rel_sep.insert(index, last_sep + rel_sep);
+            // remember: first entry is always 0!!!
+            self.rel_sep.insert(index+1, last_sep + rel_sep);
         }
 
         match self.alignment {

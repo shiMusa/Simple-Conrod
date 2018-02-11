@@ -9,6 +9,284 @@ use conrod::backend::glium::glium::{self, Surface};
 use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
+use std::fmt::{Debug, Formatter, Result};
+
+
+
+
+
+static DEBUG: bool = false;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum RingElementSize<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    Absolute(T),
+    Relative(f64),
+}
+impl<T> RingElementSize<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    pub fn to_value(& self, cmp_to: T) -> T {
+        match self {
+            &RingElementSize::Absolute(x) => x,
+            &RingElementSize::Relative(x) => T::from(cmp_to.to_f64().unwrap() * x).unwrap(),
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+#[derive(Debug, Copy, Clone)]
+pub struct RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    min: RingElementSize<T>,
+    max: RingElementSize<T>,
+    size: RingElementSize<T>
+}
+impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
+    pub fn new_with_min_max(
+        min: RingElementSize<T>,
+        max: RingElementSize<T>) -> Self {
+        RingElement {
+            min, max, size: RingElementSize::Relative(0.5)
+        }
+    }
+
+    pub fn new() -> Self {
+        RingElement::new_with_min_max(
+            RingElementSize::Relative(0.0),
+            RingElementSize::Relative(1.0),
+        )
+    }
+
+    pub fn is_at_max(&self, cmp: T) -> bool {
+        let size = self.size.to_value(cmp);
+        let max = self.max.to_value(cmp);
+
+        if DEBUG {
+            println!("is at max? size {:?}, max {:?}", size, max);
+        }
+
+        if size >= max {
+            if DEBUG { println!("   yes.");}
+            true
+        } else {
+            if DEBUG { println!("   no.");}
+            false
+        }
+    }
+
+    pub fn shrink_to_min(&mut self) {
+        if DEBUG { println!("shrinking size {:?} to min {:?}", self.size, self.min);}
+        self.size = self.min;
+        if DEBUG { println!("shrinked? size {:?} to min {:?}", self.size, self.min);}
+    }
+
+    pub fn grow(&mut self, cmp: T, grow_by: T) -> T {
+        if DEBUG { println!("growing size {:?}, max {:?} by {:?}", self.size.to_value(cmp), self.max.to_value(cmp), grow_by);}
+        if self.is_at_max(cmp) {
+            if DEBUG { println!("cannot grow. already at max.");}
+            return grow_by
+        }
+        let s = self.size.to_value(cmp);
+        self.size = RingElementSize::Absolute(s + grow_by);
+
+        if self.is_at_max(cmp) {
+            let rem = self.size.to_value(cmp) - self.max.to_value(cmp);
+            self.size = self.max;
+            if DEBUG { println!("grown? size {:?}, max {:?}, rem {:?}", self.size.to_value(cmp), self.max.to_value(cmp), rem);}
+            return rem;
+        }
+        if DEBUG { println!("everything absorbed.");}
+        T::from(0).unwrap()
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#[derive(Clone)]
+pub struct Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    size: T,
+    elements: Vec<RingElement<T>>,
+    buffer: RingElement<T>,
+}
+
+impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    pub fn new_with_size(size: T) -> Self {
+        // buffer in case all min-sizes are reached.
+        // the ring is always filled out!
+        Ring {
+            size,
+            elements: Vec::new(),
+            buffer: RingElement::new()
+        }
+    }
+    pub fn new() -> Self {
+        Ring::new_with_size(T::from(1).unwrap())
+    }
+
+    pub fn push(&mut self, element: RingElement<T>) {
+        let n = self.elements.len();
+        self.insert(n, element);
+    }
+
+    pub fn insert(&mut self, index: usize, element: RingElement<T>) {
+        // check if it fits at all
+        let mut min = T::from(0).unwrap();
+
+        for el in &self.elements {
+            min = min + el.min.to_value(self.size);
+        }
+        if DEBUG { println!("minimal size for all elements {:?}", min);}
+        let mut rem = self.size - min;
+
+        let elmin = element.min.to_value(self.size);
+
+        if DEBUG {
+            if rem < elmin {
+                println!("ERROR: Cannot insert element into Ring: no size left. Ignoring insert...");
+                println!("       size left: {:?}, min size of element: {:?}", rem, elmin);
+            }
+
+            if rem < element.size.to_value(self.size) {
+                println!("shrinking element to fit in leftover space...")
+            }
+        }
+
+        // add element since possible
+        rem = rem - element.min.to_value(self.size);
+
+        if index >= self.elements.len() {
+            self.elements.push(element);
+        } else {
+            self.elements.insert(index, element);
+        }
+
+
+
+        let num = self.elements.len();
+
+        // shrink all elements before expanding again
+        self.buffer.shrink_to_min();
+        for el in &mut self.elements {
+            el.shrink_to_min();
+        }
+
+        // gradually expand as long as there is space left
+        if DEBUG { println!("starting remnant {:?}", rem);}
+
+        while rem > T::from(0).unwrap() {
+            // calculate remnant space in this iteration and the amount to grow
+            // TODO implement weights for each element
+            let rem_grow = T::from( rem.to_f64().unwrap() / num as f64).unwrap();
+            rem = T::from(0).unwrap();
+
+            // grow and store leftover
+            for k in 0..num {
+                rem = rem + self.elements[k].grow(self.size, rem_grow);
+            }
+            if DEBUG { println!("    remnant {:?}", rem);}
+
+            // all max_sizes reached?
+            let mut all_max = true;
+            for el in &self.elements {
+                if !el.is_at_max(self.size) {
+                    all_max = false;
+                }
+            }
+            if all_max {
+                if DEBUG { println!("every element at max. Filling buffer...");}
+                self.buffer.size = RingElementSize::Absolute(rem);
+                break
+            }
+        }
+    }
+}
+
+#[allow(unused_must_use)]
+impl<T> Debug for Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        writeln!(f, "Ring: size {:?}", self.size);
+        writeln!(f, "    buffer: size {:?}", self.buffer.size);
+        for n in 0..self.elements.len() {
+            let min = self.elements[n].min.to_value(self.size);
+            let size = self.elements[n].size.to_value(self.size);
+            let max = self.elements[n].max.to_value(self.size);
+
+            writeln!(f, "    min: {:?}, size: {:?}, max: {:?}", min, size, max);
+        }
+        writeln!(f, "")
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -367,11 +645,13 @@ impl BaseWindow {
                 update = true;
             }
 
-            let time_diff = time::precise_time_ns() - t0;
-            if time_diff >= dt_ns {
-                self.ui.needs_redraw();
-                t0 = time::precise_time_ns();
-                update = true;
+            if fps > 0.0 {
+                let time_diff = time::precise_time_ns() - t0;
+                if time_diff >= dt_ns {
+                    self.ui.needs_redraw();
+                    t0 = time::precise_time_ns();
+                    update = true;
+                }
             }
 
             if update {
