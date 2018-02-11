@@ -13,13 +13,13 @@ use elements::*;
 
 
 
-
-
+#[allow(dead_code)]
 pub struct LabelText {
     text: String,
     size: u32,
 }
 
+#[allow(dead_code)]
 impl LabelText {
     pub fn new(text: String, size: u32) -> Self {
         LabelText { text, size }
@@ -62,9 +62,6 @@ pub struct Button {
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
-    min_size: Vec2<i32>,
-    max_size: Vec2<i32>,
-
     button_ids: Option<ButtonIds>,
     click_fn: Box<Fn()>,
     color: conrod::Color,
@@ -76,12 +73,9 @@ impl Button {
     pub fn new() -> Box<Self> {
         let fun = Box::new(||{});
 
-        use std::i32;
         Box::new(Button {
             global_center: Vec2::zero(),
             frame: Frame::new(100,100),
-            min_size: Vec2::zero(),
-            max_size: Vec2{x: i32::MAX, y: i32::MAX},
             button_ids: None,
             click_fn: fun,
             color: conrod::color::GRAY,

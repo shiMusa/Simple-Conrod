@@ -302,6 +302,8 @@ impl Element for Pad {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
+
+    #[allow(unreachable_patterns)]
     fn set_frame(&mut self, frame: Frame<i32>) {
         self.frame = frame;
         use self::PadAlignment::*;

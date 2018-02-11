@@ -1,15 +1,10 @@
 #![feature(duration_extras)]
 
 pub mod elements;
-//pub mod clock;
 
 #[macro_use] extern crate conrod;
 extern crate time;
 extern crate num;
-
-use std::thread;
-use std::sync::{Arc, RwLock};
-use std::sync::mpsc::{self, Sender, Receiver};
 
 use elements::{*, container::*, basic::*};
 
@@ -19,7 +14,6 @@ fn main() {
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
 
     let mut list = List::new(ListAlignment::Vertical);
-    //list.set_frame(Frame::new(300, 700));
     list.add_element(
         Pad::new(
             Button::new()
@@ -43,7 +37,6 @@ fn main() {
     );
 
     let mut sublist = List::new(ListAlignment::Horizontal);
-    //sublist.set_frame(Frame::new(300,300));
     sublist.add_element(
         Button::new()
             .with_action_click(Box::new(|| {
