@@ -68,7 +68,7 @@ fn main() {
     );
 
     inner_layer.push(
-        Label::new("Your Ads here!".to_string(), 60)
+        Label::new_with_font_size("Your Ads here!".to_string(), 60)
             .with_color(conrod::color::RED)
     );
 

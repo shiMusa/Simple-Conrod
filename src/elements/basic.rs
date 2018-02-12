@@ -31,7 +31,10 @@ pub struct Label {
 }
 
 impl Label {
-    pub fn new(text: String, font_size: u32) -> Box<Self> {
+    pub fn new(text: String) -> Box<Self> {
+        Label::new_with_font_size(text, 12)
+    }
+    pub fn new_with_font_size(text: String, font_size: u32) -> Box<Self> {
         Box::new(Label {
             text,
             font_size,
