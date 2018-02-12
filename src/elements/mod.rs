@@ -13,8 +13,6 @@ use std::fmt::{Debug, Formatter, Result};
 
 
 
-
-
 const DEBUG: bool = false;
 
 
@@ -54,13 +52,6 @@ impl<T> RingElementSize<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         }
     }
 }
-
-
-
-
-
-
-
 
 
 
@@ -163,13 +154,6 @@ impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
 
 
 
-
-
-
-
-
-
-
 #[derive(Clone)]
 pub struct Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
     size: T,
@@ -191,6 +175,27 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         Ring::new_with_size(T::from(1).unwrap())
     }
 
+    pub fn get(&self, index: usize) -> T {
+        if index == self.elements.len() {
+            T::zero()
+        } else {
+            self.elements[index].get_size(self.size)
+        }
+    }
+
+    pub fn get_sum(&self, mut index: usize) -> T {
+        let mut res = T::zero();
+        if index == 0 { return res; }
+        if index > self.elements.len() {
+            index = self.elements.len();
+        }
+
+        for i in 0..index {
+            res = res + self.get(i);
+        }
+        res
+    }
+
     pub fn push(&mut self, element: RingElement<T>) {
         let n = self.elements.len();
         self.insert(n, element);
@@ -198,7 +203,7 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
 
     pub fn insert(&mut self, index: usize, element: RingElement<T>) {
         // check if it fits at all
-        let mut min = T::from(0).unwrap();
+        let mut min = T::zero();
 
         for el in &self.elements {
             min = min + el.get_min(self.size);
@@ -237,6 +242,7 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
     }
 
     fn rescale_elements(&mut self) {
+        if DEBUG { println!("Ring: rescale_elements...");}
         let num = self.elements.len();
 
         // shrink all elements before expanding again
@@ -263,12 +269,20 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
             // TODO implement weights for each element
             let rem_grow = T::from( rem.to_f64().unwrap() / (num_growable as f64)).unwrap();
 
-            // grow and store leftover
-            let mut el_size = T::from(0).unwrap();
+            // consider rem_grow = 0.5 for int, so actually rem_grow = 0, but still space left
+            let mut sub_one = rem - rem_grow * T::from(num_growable).unwrap();
+
+            // grow
+            let mut el_size = T::zero();
             for k in 0..num {
                 let el = &mut self.elements[k];
                 if !checked[k] {
-                    el.grow(self.size, rem_grow);
+                    if sub_one > T::zero() {
+                        el.grow(self.size, rem_grow + T::one());
+                        sub_one = sub_one - T::one();
+                    } else {
+                        el.grow(self.size, rem_grow);
+                    }
                 }
                 el_size = el_size + el.get_size(self.size);
             }
@@ -432,11 +446,16 @@ pub struct Frame<T> where  T: Num + NumCast + PartialOrd + Copy {
     pub p0: Vec2<T>, pub p1: Vec2<T>,
 }
 impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
-    pub fn new(width: T, height: T) -> Self {
+    pub fn new_with_size(width: T, height: T) -> Self {
         Frame{
-            p0: Vec2{x: T::from(0).unwrap(), y: T::from(0).unwrap()},
+            p0: Vec2{x: T::zero(), y: T::zero()},
             p1: Vec2{x: width, y: height}
         }
+    }
+
+    pub fn new() -> Self {
+        let one = T::one();
+        Frame::new_with_size(one, one)
     }
 
     pub fn width(&self) -> T {
@@ -510,6 +529,22 @@ pub trait Clickable {
 pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -676,7 +711,7 @@ impl BaseWindow {
                                     if h < min.y as u32 { h = min.y as u32; }
 
                                     self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
-                                    el.set_frame(Frame::new(w as i32,h as i32));
+                                    el.set_frame(Frame::new_with_size(w as i32,h as i32));
                                     el.set_window_center(self.window_center);
                                 } else {
                                     self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};

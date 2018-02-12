@@ -75,7 +75,7 @@ impl Button {
 
         Box::new(Button {
             global_center: Vec2::zero(),
-            frame: Frame::new(100,100),
+            frame: Frame::new(),
             button_ids: None,
             click_fn: fun,
             color: conrod::color::GRAY,

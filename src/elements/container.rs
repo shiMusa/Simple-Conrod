@@ -9,12 +9,30 @@ use elements::*;
 
 
 
+
+
+
+
+
+const DEBUG: bool = false;
+
+
+
+
+
+
+
+
+
+
+
+
 pub struct Empty {
     frame: Frame<i32>
 }
 impl Empty {
     pub fn new() -> Box<Self> {
-        Box::new(Empty{frame: Frame::new(0,0)})
+        Box::new(Empty{frame: Frame::new()})
     }
 }
 impl Element for Empty {
@@ -57,7 +75,7 @@ pub enum ListElementSize {
 
 pub struct List {
     elements: Vec<Box<Element>>,
-    rel_sep: Vec<f64>,
+    ring: Ring<i32>,
     alignment: ListAlignment,
 
     frame: Frame<i32>,
@@ -66,75 +84,66 @@ pub struct List {
 
 impl List {
     pub fn new(alignment: ListAlignment) -> Box<Self> {
-        let mut list = Box::new(List {
+        Box::new(List {
             elements: Vec::new(),
-            rel_sep: vec![0.0],
+            ring: Ring::new(),
             alignment,
-            frame: Frame::new(100,100),
+            frame: Frame::new(),
             global_center: Vec2::zero(),
-        });
-        list.add_element(Empty::new());
-        list
+        })
     }
 
     pub fn add_element(&mut self, element: Box<Element>) {
         //let n = self.elements.len();
-        self.add_element_at(element, 0);
+        self.insert_element(0, element);
     }
 
-    pub fn add_element_at(&mut self, mut element: Box<Element>, index: usize) {
+    pub fn insert_element(&mut self, index: usize, mut element: Box<Element>) {
 
         element.set_window_center(self.global_center);
 
-        let n = self.elements.len();
-        let rel_sep = 1.0 / ((n+1) as f64);
-
-        for ix in 0..n {
-            // first entry is always 0!!!
-            // so start with second entry
-            self.rel_sep[ix+1] *=  n as f64 * rel_sep;
-        }
-        let last_sep = self.rel_sep[n];
-
-        if index >= n {
-            self.rel_sep.push(last_sep + rel_sep);
+        if index >= self.elements.len() {
+            self.elements.push(element);
         } else {
-            // remember: first entry is always 0!!!
-            self.rel_sep.insert(index+1, last_sep + rel_sep);
+            self.elements.insert(index, element);
         }
+        if DEBUG { println!("inserting into ring...");}
+        self.ring.insert(index, RingElement::new());
+        if DEBUG { println!("... inserting into ring done.");}
+
+        self.rescale_elements();
+    }
+
+    fn rescale_elements(&mut self) {
+        if DEBUG { println!("rescaling...");}
 
         match self.alignment {
             ListAlignment::Horizontal => {
-                if index >= n {
-                    self.elements.push(element);
-                } else {
-                    self.elements.insert(index, element);
-                }
-
-                for ix in 0..n {
+                self.ring.resize(self.frame.width());
+                for ix in 0..self.elements.len() {
                     let el = &mut self.elements[ix];
+                    let x0 = self.ring.get_sum(ix);
+                    let x1 = self.ring.get_sum(ix+1);
                     el.set_frame(Frame{
-                        p0: Vec2{x: (self.rel_sep[ix]   * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
-                        p1: Vec2{x: (self.rel_sep[ix+1] * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
+                        p0: Vec2{x: x0 + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: x1 + self.frame.p0.x, y: self.frame.p1.y}
                     });
                 }
             },
             ListAlignment::Vertical => {
-                if index >= n {
-                    self.elements.push(element);
-                } else {
-                    self.elements.insert(index, element);
-                }
-
-                for ix in 0..n {
+                for ix in 0..self.elements.len() {
+                    self.ring.resize(self.frame.height());
                     let el = &mut self.elements[ix];
+                    let y0 = self.ring.get_sum(ix);
+                    let y1 = self.ring.get_sum(ix+1);
                     el.set_frame(Frame{
-                        p0: Vec2{x: self.frame.p0.x, y: (self.rel_sep[ix]   * self.frame.height() as f64) as i32 + self.frame.p0.y},
-                        p1: Vec2{x: self.frame.p1.x, y: (self.rel_sep[ix+1] * self.frame.height() as f64) as i32 + self.frame.p0.y}
+                        p0: Vec2{x: self.frame.p0.x, y: y0 + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: y1 + self.frame.p0.y}
                     });
                 }
             },
         }
+        if DEBUG { println!("... rescaling done.");}
     }
 }
 
@@ -161,29 +170,7 @@ impl Element for List {
     }
     fn set_frame(&mut self, frame: Frame<i32>) {
         self.frame = frame;
-
-        let n = self.elements.len();
-
-        match self.alignment {
-            ListAlignment::Horizontal => {
-                for ix in 0..n {
-                    let el = &mut self.elements[ix];
-                    el.set_frame(Frame{
-                        p0: Vec2{x: (self.rel_sep[ix]   * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p0.y},
-                        p1: Vec2{x: (self.rel_sep[ix+1] * self.frame.width() as f64) as i32 + self.frame.p0.x, y: self.frame.p1.y}
-                    });
-                }
-            },
-            ListAlignment::Vertical => {
-                for ix in 0..n {
-                    let el = &mut self.elements[ix];
-                    el.set_frame(Frame{
-                        p0: Vec2{x: self.frame.p0.x, y: (self.rel_sep[ix]   * self.frame.height() as f64) as i32 + self.frame.p0.y},
-                        p1: Vec2{x: self.frame.p1.x, y: (self.rel_sep[ix+1] * self.frame.height() as f64) as i32 + self.frame.p0.y}
-                    });
-                }
-            },
-        }
+        self.rescale_elements();
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -299,7 +286,7 @@ impl Pad {
             element,
             alignment,
             pad_size: size,
-            frame: Frame::new(100,100),
+            frame: Frame::new(),
             global_center: Vec2::zero(),
             ids: None,
             background: Background::None,

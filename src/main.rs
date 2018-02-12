@@ -12,7 +12,6 @@ use elements::{*, container::*, basic::*};
 
 fn main() {
 
-
     // testing the Ring system...
     // why is this not part of the std library???
     let mut ring: Ring<i32> = Ring::new_with_size(100);
@@ -38,6 +37,11 @@ fn main() {
 
     ring.resize(1000);
     println!("{:?}", ring);
+
+    for i in 0..4 {
+        println!("{:?}", ring.get_sum(i));
+    }
+
 
 
 
