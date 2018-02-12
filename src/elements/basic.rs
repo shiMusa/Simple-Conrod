@@ -11,18 +11,106 @@ use elements::*;
 
 
 
+widget_ids!(
+    struct LabelIds {
+        label,
+        background,
+    }
+);
 
-
-#[allow(dead_code)]
-pub struct LabelText {
+pub struct Label {
     text: String,
-    size: u32,
+    font_size: u32,
+    color: conrod::Color,
+    background: Background,
+
+    frame: Frame<i32>,
+    global_center: Vec2<i32>,
+
+    label_ids: Option<LabelIds>,
 }
 
-#[allow(dead_code)]
-impl LabelText {
-    pub fn new(text: String, size: u32) -> Self {
-        LabelText { text, size }
+impl Label {
+    pub fn new(text: String, font_size: u32) -> Box<Self> {
+        Box::new(Label {
+            text,
+            font_size,
+            color: conrod::color::BLACK,
+            background: Background::None,
+            frame: Frame::new(),
+            global_center: Vec2::zero(),
+            label_ids: None,
+        })
+    }
+}
+
+impl Element for Label {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.label_ids = Some(LabelIds::new(ui.widget_id_generator()));
+    }
+
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        use conrod::{widget, Positionable, Colorable, Widget, Borderable};
+
+        if let Some(ref ids) = self.label_ids {
+            let c = self.frame.center() - self.global_center;
+
+            match self.background {
+                Background::None => (),
+                Background::Color(color) => {
+                    let mut rect = conrod::widget::Rectangle::fill_with(
+                        [self.frame.width() as f64, self.frame.height() as f64],
+                        color
+                    ).x_y(c.x as f64, c.y as f64);
+                    rect.set(ids.background, ui);
+                }
+            }
+
+            widget::Text::new(&self.text.to_owned())
+                .x_y(c.x as f64, c.y as f64)
+                .color(self.color)
+                .font_size(self.font_size)
+                .set(ids.label, ui);
+        }
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+    fn set_frame(&mut self, frame: Frame<i32>) {
+        self.frame = frame;
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        Vec2::zero()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        Vec2{ x: i32::MAX, y: i32::MAX }
+    }
+
+    fn set_window_center(&mut self, center: Vec2<i32>) {
+        self.global_center = center;
+    }
+}
+
+impl Labelable for Label {
+    fn with_label(mut self, label: String) -> Box<Self> {
+        self.text = label;
+        Box::new(self)
+    }
+}
+
+impl Colorable for Label {
+    fn with_color(mut self, color: conrod::Color) -> Box<Self> {
+        self.color = color;
+        Box::new(self)
+    }
+}
+
+impl Backgroundable for Label {
+    fn with_background(mut self, bg: Background) -> Box<Self> {
+        self.background = bg;
+        Box::new(self)
     }
 }
 

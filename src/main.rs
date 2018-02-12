@@ -56,16 +56,23 @@ fn main() {
     );
 
 
-    list.push(
-        Pad::new(
-            Button::new()
-                .with_action_click( Box::new(|| {
-                    println!("List -> Pad -> Button with const size");
-                })),
-            PadAlignment::TopLeft,
-            PadElementSize::Absolute(200, 200)
-        ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
+    let mut inner_layer = Layers::new();
+    inner_layer.push(Pad::new(
+        Button::new()
+            .with_action_click( Box::new(|| {
+                println!("List -> Pad -> Button with const size");
+            })),
+        PadAlignment::TopLeft,
+        PadElementSize::Absolute(200, 200) )
+        .with_background(Background::Color(conrod::color::LIGHT_BLUE))
     );
+
+    inner_layer.push(
+        Label::new("Your Ads here!".to_string(), 60)
+            .with_color(conrod::color::RED)
+    );
+
+    list.push(inner_layer);
 
 
     layers.push(list);
