@@ -1,9 +1,11 @@
 # Simple-Conrod
 simple and user-friendly gui framework in <b>Rust</b> based on <b>Conrod</b>
 
+Example can be found in main() function.
+
 <b>heavy WIP!</b>
 
-![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example.PNG)
+![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example_new.PNG)
 
 The main goal is
  - a simple interface for users, especially for beginners and intermediates
@@ -20,4 +22,4 @@ Plans:
  - scientific plotting
  - implementing other backends (Gfx, glutin)
  
-Example can be found in main() function.
+
