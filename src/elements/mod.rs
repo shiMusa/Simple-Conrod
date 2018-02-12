@@ -530,22 +530,9 @@ pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+pub trait Colorable {
+    fn with_color(self, color: conrod::Color) -> Box<Self>;
+}
 
 
 pub enum Background {

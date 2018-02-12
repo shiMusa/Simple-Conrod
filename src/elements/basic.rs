@@ -84,6 +84,13 @@ impl Button {
     }
 }
 
+impl Colorable for Button {
+    fn with_color(mut self, color: conrod::Color) -> Box<Self> {
+        self.color = color;
+        Box::new(self)
+    }
+}
+
 impl Labelable for Button {
     fn with_label(mut self, label: String) -> Box<Self> {
         self.label = Some(label);

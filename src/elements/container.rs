@@ -62,6 +62,110 @@ impl Element for Empty {
 
 
 
+pub struct Layers {
+    layers: Vec<Box<Element>>,
+
+    frame: Frame<i32>,
+}
+
+impl Layers {
+    pub fn new() -> Box<Self> {
+        Box::new(Layers {
+            layers: Vec::new(),
+            frame: Frame::new()
+        })
+    }
+
+    pub fn push(&mut self, element: Box<Element>) {
+        self.layers.push(element);
+    }
+
+    pub fn insert(&mut self, index: usize, element: Box<Element>) {
+        if index >= self.layers.len() {
+            self.layers.push(element);
+        } else {
+            self.layers.insert(index, element);
+        }
+    }
+}
+
+impl Element for Layers {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        for el in &mut self.layers {
+            el.setup(ui);
+        }
+    }
+
+    fn stop(&self) {
+        for el in &self.layers {
+            el.stop();
+        }
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        for n in 0..self.layers.len() {
+            self.layers[n].build_window(ui);
+        }
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+    fn set_frame(&mut self, frame: Frame<i32>) {
+        self.frame = frame;
+        for el in &mut self.layers {
+            el.set_frame(frame);
+        }
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        let mut res = Vec2::zero();
+        for el in &self.layers {
+            let min = el.get_min_size();
+            if res.x < min.x { res.x = min.x }
+            if res.y < min.y { res.y = min.y }
+        }
+        res
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        use std::i32;
+        let mut res = Vec2{
+            x: i32::MAX, y: i32::MAX
+        };
+        for el in &self.layers {
+            let max = el.get_max_size();
+            if res.x > max.x { res.x = max.x }
+            if res.y > max.y { res.y = max.y }
+        }
+        res
+    }
+
+    fn set_window_center(&mut self, center: Vec2<i32>) {
+        for el in &mut self.layers {
+            el.set_window_center(center);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub enum ListAlignment {
     Horizontal,
     Vertical,
@@ -93,12 +197,12 @@ impl List {
         })
     }
 
-    pub fn add_element(&mut self, element: Box<Element>) {
+    pub fn push(&mut self, element: Box<Element>) {
         //let n = self.elements.len();
-        self.insert_element(0, element);
+        self.insert(0, element);
     }
 
-    pub fn insert_element(&mut self, index: usize, mut element: Box<Element>) {
+    pub fn insert(&mut self, index: usize, mut element: Box<Element>) {
 
         element.set_window_center(self.global_center);
 

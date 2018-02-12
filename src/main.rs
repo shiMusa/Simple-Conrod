@@ -11,39 +11,20 @@ use elements::{*, container::*, basic::*};
 
 
 fn main() {
-    let mut base_window = BaseWindow::new("Container".to_string(), 800, 600);
+    let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
+
+    let mut layers = Layers::new();
 
     let mut list = List::new(ListAlignment::Vertical);
-    list.add_element(
-        Pad::new(
-            Button::new()
-                .with_action_click( Box::new(|| {
-                    println!("List -> Pad -> Button with const size");
-                })),
-            PadAlignment::TopLeft,
-            PadElementSize::Absolute(200, 200)
-        ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
-    );
-
-    list.add_element(
-        Pad::new(
-            Button::new()
-                .with_action_click(Box::new(||{
-                    println!("List -> Button");
-                })),
-            PadAlignment::Center,
-            PadElementSize::AbsoluteNeg(20,20)
-        )
-    );
 
     let mut sublist = List::new(ListAlignment::Horizontal);
-    sublist.add_element(
+    sublist.push(
         Button::new()
             .with_action_click(Box::new(|| {
                 println!("List -> List -> Button 1")
             })),
     );
-    sublist.add_element(
+    sublist.push(
         Pad::new(
             Button::new()
                 .with_action_click(Box::new(|| {
@@ -54,16 +35,51 @@ fn main() {
             PadElementSize::Relative(0.5, 0.5)
         ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
     );
-    sublist.add_element(
+    sublist.push(
         Button::new()
             .with_action_click(Box::new(|| {
                 println!("List -> List -> Button 2");
             }))
     );
+    list.push(sublist);
 
 
-    list.add_element(sublist);
-    base_window.add_element(list);
+    list.push(
+        Pad::new(
+            Button::new()
+                .with_action_click(Box::new(||{
+                    println!("List -> Button");
+                })),
+            PadAlignment::Center,
+            PadElementSize::AbsoluteNeg(20,20)
+        )
+    );
+
+
+    list.push(
+        Pad::new(
+            Button::new()
+                .with_action_click( Box::new(|| {
+                    println!("List -> Pad -> Button with const size");
+                })),
+            PadAlignment::TopLeft,
+            PadElementSize::Absolute(200, 200)
+        ).with_background(Background::Color(conrod::color::LIGHT_BLUE))
+    );
+
+
+    layers.push(list);
+
+    layers.push(Pad::new(
+        Button::new().with_action_click(Box::new(||{
+            println!("Äktschöööööön!!!!");
+        })).with_color(conrod::color::LIGHT_GREEN),
+        PadAlignment::Center,
+        PadElementSize::Relative(0.5, 0.4)
+    ));
+
+
+    base_window.add_element(layers);
 
     base_window.run(-1f64);
 }
