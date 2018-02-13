@@ -518,8 +518,8 @@ pub trait Element {
     }
 
     fn set_window_center(&mut self, center: Vec2<i32>);
+    fn process_and_transmit_msg(&mut self, msg: &ActionMsg);
 }
-
 
 
 pub trait Clickable {
@@ -570,6 +570,102 @@ pub trait Backgroundable {
 
 
 
+
+
+
+
+use std::sync::mpsc::{Sender, Receiver};
+
+
+#[derive(Debug, Clone)]
+pub enum ActionMsgData {
+    Click,
+    Text(String),
+    Exit,
+}
+
+#[derive(Debug, Clone)]
+pub struct ActionMsg{
+    pub sender_id: String,
+    pub msg: ActionMsgData
+}
+
+
+pub trait Actionable {
+    fn with_id(self, id: String) -> Box<Self>;
+    fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub struct BaseWindow {
     events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
@@ -580,6 +676,8 @@ pub struct BaseWindow {
     window_center: Vec2<i32>,
 
     element: Option<Box<Element>>,
+    receiver: Option<Receiver<ActionMsg>>,
+    senders: Vec<Sender<ActionMsg>>,
 }
 
 impl BaseWindow {
@@ -590,16 +688,18 @@ impl BaseWindow {
         }
     }
 
-    /*
-    pub fn get_ui(&mut self) -> &mut conrod::Ui {
-        &mut self.ui
-    }
-    */
-
 
     pub fn add_element(&mut self, mut element: Box<Element>) {
         element.set_window_center(self.window_center);
         self.element = Some(element);
+    }
+
+    pub fn add_receiver(&mut self, receiver: Receiver<ActionMsg>) {
+        self.receiver = Some(receiver);
+    }
+
+    pub fn add_sender(&mut self, sender: Sender<ActionMsg>) {
+        self.senders.push(sender);
     }
 
 
@@ -644,6 +744,8 @@ impl BaseWindow {
             image_map,
             ui,
             element: None,
+            receiver: None,
+            senders: Vec::new(),
             window_center: Vec2{x: (width as f64/2f64) as i32, y: (height as f64/2f64) as i32}
         }
     }
@@ -722,12 +824,32 @@ impl BaseWindow {
                 update = true;
             }
 
+            // check for fps forced update
             if fps > 0.0 {
                 let time_diff = time::precise_time_ns() - t0;
                 if time_diff >= dt_ns {
                     self.ui.needs_redraw();
                     t0 = time::precise_time_ns();
                     update = true;
+                }
+            }
+
+            // check if msg have to be processed
+            if let &Some(ref receiver) = &self.receiver {
+                'receive: loop {
+                    match receiver.try_recv() {
+                        Ok(msg) => {
+                            println!("message received: {:?}", msg);
+                            if let Some(ref mut el) = self.element {
+                                el.process_and_transmit_msg(&msg);
+                            }
+                            update = true;
+                            for sender in &mut self.senders {
+                                sender.send(msg.clone());
+                            }
+                        },
+                        _ => break 'receive
+                    }
                 }
             }
 

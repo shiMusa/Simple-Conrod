@@ -6,6 +6,27 @@ use conrod;
 
 use elements::*;
 
+use std::sync::mpsc::{Sender};
+
+
+
+
+
+const DEBUG: bool = true;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -53,7 +74,7 @@ impl Element for Label {
     }
 
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        use conrod::{widget, Positionable, Colorable, Widget, Borderable};
+        use conrod::{widget, Positionable, Colorable, Widget};
 
         if let Some(ref ids) = self.label_ids {
             let c = self.frame.center() - self.global_center;
@@ -94,6 +115,8 @@ impl Element for Label {
     fn set_window_center(&mut self, center: Vec2<i32>) {
         self.global_center = center;
     }
+
+    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg){}
 }
 
 impl Labelable for Label {
@@ -137,10 +160,6 @@ impl Backgroundable for Label {
 
 
 
-
-
-
-
 widget_ids!(
     struct ButtonIds {
         button,
@@ -148,8 +167,10 @@ widget_ids!(
 );
 
 
-
 pub struct Button {
+    id: String,
+    senders: Vec<Sender<ActionMsg>>,
+
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
@@ -164,14 +185,29 @@ impl Button {
     pub fn new() -> Box<Self> {
         let fun = Box::new(||{});
 
-        Box::new(Button {
+        let button = Box::new(Button {
+            id: "Button".to_string(),
+            senders: Vec::new(),
+
             global_center: Vec2::zero(),
             frame: Frame::new(),
             button_ids: None,
             click_fn: fun,
             color: conrod::color::GRAY,
             label: None,
-        })
+        });
+
+        if DEBUG { println!("{:?}", button); }
+        button
+    }
+}
+
+#[allow(unused_must_use)]
+impl Debug for Button {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        writeln!(f, "(Button {:?}) {} ", self.label, self.id);
+        writeln!(f, "    {:?}", self.frame);
+        writeln!(f, "    {:?}", self.color)
     }
 }
 
@@ -193,6 +229,18 @@ impl Labelable for Button {
 impl Clickable for Button {
     fn with_action_click(mut self, fun: Box<Fn()>) -> Box<Self> {
         self.click_fn = fun;
+        Box::new(self)
+    }
+}
+
+
+impl Actionable for Button {
+    fn with_id(mut self, id: String) -> Box<Self> {
+        self.id = id;
+        Box::new(self)
+    }
+    fn with_sender(mut self, sender: Sender<ActionMsg>) -> Box<Self> {
+        self.senders.push(sender);
         Box::new(self)
     }
 }
@@ -222,6 +270,15 @@ impl Element for Button {
             let mut event = button.set(ids.button, ui);
 
             if event.was_clicked() {
+                // broadcast click action
+                for sender in &self.senders {
+                    let _ = sender.send(ActionMsg{
+                        sender_id: self.id.clone(),
+                        msg: ActionMsgData::Click,
+                    });
+                }
+
+                // execute custom function
                 (self.click_fn)();
             }
         }
@@ -237,4 +294,6 @@ impl Element for Button {
     fn set_window_center(&mut self, center: Vec2<i32>) {
         self.global_center = center;
     }
+
+    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg) {}
 }

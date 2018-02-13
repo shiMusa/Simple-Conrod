@@ -45,6 +45,7 @@ impl Element for Empty {
     }
 
     fn set_window_center(&mut self, _center: Vec2<i32>) {}
+    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg) {}
 }
 
 
@@ -142,6 +143,12 @@ impl Element for Layers {
     fn set_window_center(&mut self, center: Vec2<i32>) {
         for el in &mut self.layers {
             el.set_window_center(center);
+        }
+    }
+
+    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+        for layer in &mut self.layers {
+            layer.process_and_transmit_msg(msg);
         }
     }
 }
@@ -317,6 +324,12 @@ impl Element for List {
         let n = self.elements.len();
         for ix in 0..n {
             self.elements[ix].set_window_center(center);
+        }
+    }
+
+    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+        for el in &mut self.elements {
+            el.process_and_transmit_msg(msg);
         }
     }
 }
@@ -553,5 +566,9 @@ impl Element for Pad {
     fn set_window_center(&mut self, center: Vec2<i32>) {
         self.global_center = center;
         self.element.set_window_center(center);
+    }
+
+    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+        self.element.process_and_transmit_msg(msg);
     }
 }

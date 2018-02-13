@@ -9,16 +9,37 @@ extern crate num;
 use elements::{*, container::*, basic::*};
 
 
+use std::sync::mpsc::{self, Sender, Receiver};
+use std::thread;
+
+
 
 fn main() {
 
-    use std::rc::Rc;
-    use std::cell::{Ref, RefCell, RefMut};
-    //use std::borrow::*;
 
-    let data = Rc::new(RefCell::new(Vec::new()));
+    let (parallel_sender, parallel_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+
+    let t = thread::spawn(move || {
+        use std::time::Duration;
+        loop {
+            if let Ok(msg) = parallel_receiver.try_recv() {
+                println!("parallel receiver: {:?}", msg);
+                match (msg.sender_id.as_ref(), msg.msg) {
+                    ("Stop", ActionMsgData::Click) => break,
+                    _ => (),
+                }
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        println!("parallel thread stopped.");
+    });
+
+
 
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
+    let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    base_window.add_receiver(base_receiver);
+    base_window.add_sender(parallel_sender.clone());
 
     let mut layers = Layers::new();
 
@@ -26,25 +47,21 @@ fn main() {
 
     let mut sublist = List::new(ListAlignment::Horizontal);
 
-    let clone1 = Rc::clone(&data);
     sublist.push(
         Button::new()
             .with_action_click(Box::new(move || {
                 println!("List -> List -> Button 1");
-                println!("data = {:?}", clone1.borrow());
-                clone1.borrow_mut().push(100);
             })),
     );
-    let clone2 = Rc::clone(&data);
     sublist.push(
         Pad::new(
             Button::new()
                 .with_action_click(Box::new(move || {
                     println!("List -> List -> Pad -> Button");
-                    println!("data = {:?}", clone2.borrow());
-                    clone2.borrow_mut().push(42);
                 }))
-                .with_label("Stop.".to_string()),
+                .with_label("Stop.".to_string())
+                .with_id("Stop".to_string())
+                .with_sender(base_sender.clone()),
             PadAlignment::Center,
             PadElementSize::Relative(0.5, 0.5)
         ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
@@ -87,14 +104,18 @@ fn main() {
     );
 
     list.push(inner_layer);
-
-
     layers.push(list);
 
+
     layers.push(Pad::new(
-        Button::new().with_action_click(Box::new(||{
-            println!("Äktschöööööön!!!!");
-        })).with_color(conrod::color::LIGHT_GREEN),
+        Button::new()
+            .with_action_click(Box::new(||{
+                println!("Äktschöööööön!!!!");
+            }))
+            .with_color(conrod::color::LIGHT_GREEN)
+            .with_id("Action".to_string())
+            .with_sender(base_sender)
+            .with_sender(parallel_sender), // sending double: via base_window and directly
         PadAlignment::Center,
         PadElementSize::Relative(0.5, 0.4)
     ));
@@ -103,6 +124,5 @@ fn main() {
     base_window.add_element(layers);
 
     base_window.run(-1f64);
-
-    println!("{:?}", data.borrow());
+    let _ = t.join();
 }
