@@ -5,8 +5,6 @@ Example can be found in main() function.
 
 <b>heavy WIP!</b>
 
-![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example_new.PNG)
-
 The main goal is
  - a simple interface for users, especially for beginners and intermediates
  - not necessary performance, but ease of understanding
@@ -21,5 +19,9 @@ Plans:
  - gui animations
  - scientific plotting
  - implementing other backends (Gfx, glutin)
+
+![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example_new.PNG)
+
+
  
 
