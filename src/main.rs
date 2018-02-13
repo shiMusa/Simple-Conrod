@@ -11,6 +11,13 @@ use elements::{*, container::*, basic::*};
 
 
 fn main() {
+
+    use std::rc::Rc;
+    use std::cell::{Ref, RefCell, RefMut};
+    //use std::borrow::*;
+
+    let data = Rc::new(RefCell::new(Vec::new()));
+
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
 
     let mut layers = Layers::new();
@@ -18,17 +25,24 @@ fn main() {
     let mut list = List::new(ListAlignment::Vertical);
 
     let mut sublist = List::new(ListAlignment::Horizontal);
+
+    let clone1 = Rc::clone(&data);
     sublist.push(
         Button::new()
-            .with_action_click(Box::new(|| {
-                println!("List -> List -> Button 1")
+            .with_action_click(Box::new(move || {
+                println!("List -> List -> Button 1");
+                println!("data = {:?}", clone1.borrow());
+                clone1.borrow_mut().push(100);
             })),
     );
+    let clone2 = Rc::clone(&data);
     sublist.push(
         Pad::new(
             Button::new()
-                .with_action_click(Box::new(|| {
+                .with_action_click(Box::new(move || {
                     println!("List -> List -> Pad -> Button");
+                    println!("data = {:?}", clone2.borrow());
+                    clone2.borrow_mut().push(42);
                 }))
                 .with_label("Stop.".to_string()),
             PadAlignment::Center,
@@ -89,4 +103,6 @@ fn main() {
     base_window.add_element(layers);
 
     base_window.run(-1f64);
+
+    println!("{:?}", data.borrow());
 }
