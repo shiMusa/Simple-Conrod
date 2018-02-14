@@ -101,8 +101,9 @@ impl Element for Label {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.frame = frame;
+        self.global_center = window_center;
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -110,10 +111,6 @@ impl Element for Label {
     }
     fn get_max_size(&self) -> Vec2<i32> {
         Vec2{ x: i32::MAX, y: i32::MAX }
-    }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
     }
 
     fn transmit_msg(&mut self, _msg: ActionMsg){}
@@ -190,8 +187,8 @@ impl Element for LabelSocket {
     fn get_frame(&self) -> Frame<i32> {
         self.label.get_frame()
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
-        self.label.set_frame(frame);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.label.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -201,9 +198,6 @@ impl Element for LabelSocket {
         self.label.get_max_size()
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.label.set_window_center(center);
-    }
     fn transmit_msg(&mut self, msg: ActionMsg) {
         // first socket, then content
         (self.receive)(&mut self.label, msg.clone());
@@ -374,12 +368,9 @@ impl Element for Button {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
         self.frame = frame;
-    }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg) { }
@@ -428,8 +419,8 @@ impl Element for ButtonSocket {
     fn get_frame(&self) -> Frame<i32> {
         self.button.get_frame()
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
-        self.button.set_frame(frame);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.button.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -439,12 +430,9 @@ impl Element for ButtonSocket {
         self.button.get_max_size()
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.button.set_window_center(center);
-    }
     fn transmit_msg(&mut self, msg: ActionMsg) {
         // first socket, then content
-        (self.receive)(&self.button, msg.clone());
+        (self.receive)(&mut self.button, msg.clone());
         self.button.transmit_msg(msg);
     }
 }

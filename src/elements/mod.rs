@@ -508,7 +508,7 @@ pub trait Element {
     fn build_window(&self, ui: &mut conrod::UiCell);
 
     fn get_frame(&self) -> Frame<i32>;
-    fn set_frame(&mut self, frame: Frame<i32>);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>);
 
     fn get_min_size(&self) -> Vec2<i32> {
         Vec2::zero()
@@ -517,7 +517,6 @@ pub trait Element {
         Vec2{ x: i32::MAX, y: i32::MAX }
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>);
     fn transmit_msg(&mut self, msg: ActionMsg);
 }
 
@@ -685,8 +684,6 @@ pub struct BaseWindow {
     image_map: conrod::image::Map<glium::texture::Texture2d>,
     ui: conrod::Ui,
 
-    window_center: Vec2<i32>,
-
     element: Option<Box<Element>>,
     receiver: Option<Receiver<ActionMsg>>,
     senders: Vec<Sender<ActionMsg>>,
@@ -702,7 +699,6 @@ impl BaseWindow {
 
 
     pub fn add_element(&mut self, mut element: Box<Element>) {
-        element.set_window_center(self.window_center);
         self.element = Some(element);
     }
 
@@ -758,7 +754,6 @@ impl BaseWindow {
             element: None,
             receiver: None,
             senders: Vec::new(),
-            window_center: Vec2{x: (width as f64/2f64) as i32, y: (height as f64/2f64) as i32}
         }
     }
 
@@ -771,6 +766,8 @@ impl BaseWindow {
         // events
         let mut events = Vec::new();
         let mut t0 = time::precise_time_ns();
+
+        let mut window_frame = Frame::new();
 
         //println!("loop is starting ...............................");
         'render: loop {
@@ -801,7 +798,8 @@ impl BaseWindow {
                                 ..
                             } => break 'render,
                             WindowEvent::Resized(mut w, mut h) => {
-                                //println!("resized: ({}, {})",w,h);
+
+                                // TODO is this limit necessary?
                                 if let Some(ref mut el) = self.element {
                                     let min = el.get_min_size();
                                     let max = el.get_max_size();
@@ -811,11 +809,7 @@ impl BaseWindow {
                                     if h > max.y as u32 { h = max.y as u32; }
                                     if h < min.y as u32 { h = min.y as u32; }
 
-                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
-                                    el.set_frame(Frame::new_with_size(w as i32,h as i32));
-                                    el.set_window_center(self.window_center);
-                                } else {
-                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
+                                    window_frame = Frame::new_with_size(w as i32,h as i32);
                                 }
                             }
                             _ => (),
@@ -868,6 +862,7 @@ impl BaseWindow {
             if update {
                 let ui = &mut self.ui.set_widgets();
                 if let Some(ref mut el) = self.element {
+                    el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui);
                 }
             }

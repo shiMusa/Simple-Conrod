@@ -42,11 +42,15 @@ const DEBUG: bool = false;
 
 
 pub struct Empty {
-    frame: Frame<i32>
+    frame: Frame<i32>,
+    window_center: Vec2<i32>
 }
 impl Empty {
     pub fn new() -> Box<Self> {
-        Box::new(Empty{frame: Frame::new()})
+        Box::new(Empty{
+            frame: Frame::new(),
+            window_center: Vec2::zero()
+        })
     }
 }
 impl Element for Empty {
@@ -54,11 +58,12 @@ impl Element for Empty {
     fn build_window(&self, _ui: &mut conrod::UiCell) {}
 
     fn get_frame(&self) -> Frame<i32> { self.frame }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.frame = frame;
+        self.window_center = window_center;
+
     }
 
-    fn set_window_center(&mut self, _center: Vec2<i32>) {}
     fn transmit_msg(&mut self, _msg: ActionMsg) {}
 }
 
@@ -118,17 +123,17 @@ impl Element for Layers {
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
         for n in 0..self.layers.len() {
-            self.layers[n].build_window(ui);
+            self.layers[n].build_window(ui,);
         }
     }
 
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.frame = frame;
         for el in &mut self.layers {
-            el.set_frame(frame);
+            el.set_frame(frame, window_center);
         }
     }
 
@@ -152,12 +157,6 @@ impl Element for Layers {
             if res.y > max.y { res.y = max.y }
         }
         res
-    }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        for el in &mut self.layers {
-            el.set_window_center(center);
-        }
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg) {
@@ -206,8 +205,8 @@ impl Element for LayersSocket {
     fn get_frame(&self) -> Frame<i32> {
         self.layers.get_frame()
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
-        self.layers.set_frame(frame);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.layers.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -216,13 +215,9 @@ impl Element for LayersSocket {
     fn get_max_size(&self) -> Vec2<i32> {
         self.layers.get_max_size()
     }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.layers.set_window_center(center);
-    }
     fn transmit_msg(&mut self, msg: ActionMsg) {
         // first socket, then content
-        (self.receive)(&self.layers, msg.clone());
+        (self.receive)(&mut self.layers, msg.clone());
         self.layers.transmit_msg(msg);
     }
 }
@@ -285,8 +280,6 @@ impl List {
 
     pub fn insert(&mut self, index: usize, mut element: Box<Element>) {
 
-        element.set_window_center(self.global_center);
-
         if index >= self.elements.len() {
             self.elements.push(element);
         } else {
@@ -312,7 +305,7 @@ impl List {
                     el.set_frame(Frame{
                         p0: Vec2{x: x0 + self.frame.p0.x, y: self.frame.p0.y},
                         p1: Vec2{x: x1 + self.frame.p0.x, y: self.frame.p1.y}
-                    });
+                    }, self.global_center);
                 }
             },
             ListAlignment::Vertical => {
@@ -324,7 +317,7 @@ impl List {
                     el.set_frame(Frame{
                         p0: Vec2{x: self.frame.p0.x, y: y0 + self.frame.p0.y},
                         p1: Vec2{x: self.frame.p1.x, y: y1 + self.frame.p0.y}
-                    });
+                    }, self.global_center);
                 }
             },
         }
@@ -353,7 +346,8 @@ impl Element for List {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
         self.frame = frame;
         self.rescale_elements();
     }
@@ -391,14 +385,6 @@ impl Element for List {
             }
         }
         max
-    }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
-        let n = self.elements.len();
-        for ix in 0..n {
-            self.elements[ix].set_window_center(center);
-        }
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg) {
@@ -448,8 +434,8 @@ impl Element for ListSocket {
     fn get_frame(&self) -> Frame<i32> {
         self.list.get_frame()
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
-        self.list.set_frame(frame);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.list.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -458,13 +444,9 @@ impl Element for ListSocket {
     fn get_max_size(&self) -> Vec2<i32> {
         self.list.get_max_size()
     }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.list.set_window_center(center);
-    }
     fn transmit_msg(&mut self, msg: ActionMsg) {
         // first socket, then content
-        (self.receive)(&self.list, msg.clone());
+        (self.receive)(&mut self.list, msg.clone());
         self.list.transmit_msg(msg);
     }
 }
@@ -591,7 +573,8 @@ impl Element for Pad {
     }
 
     #[allow(unreachable_patterns)]
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
         self.frame = frame;
         use self::PadAlignment::*;
 
@@ -687,7 +670,7 @@ impl Element for Pad {
             _ => self.frame
         };
 
-        self.element.set_frame(frame);
+        self.element.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -699,11 +682,6 @@ impl Element for Pad {
         // TODO not yet correct. Need to consider relative size as well
         // TODO ... maybe not?
         self.element.get_max_size()
-    }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
-        self.element.set_window_center(center);
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg) {
@@ -752,8 +730,8 @@ impl Element for PadSocket {
     fn get_frame(&self) -> Frame<i32> {
         self.pad.get_frame()
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
-        self.pad.set_frame(frame);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.pad.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -762,13 +740,9 @@ impl Element for PadSocket {
     fn get_max_size(&self) -> Vec2<i32> {
         self.pad.get_max_size()
     }
-
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.pad.set_window_center(center);
-    }
     fn transmit_msg(&mut self, msg: ActionMsg) {
         // first socket, then content
-        (self.receive)(&self.pad, msg.clone());
+        (self.receive)(&mut self.pad, msg.clone());
         self.pad.transmit_msg(msg);
     }
 }
