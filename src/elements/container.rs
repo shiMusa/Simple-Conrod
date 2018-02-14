@@ -45,7 +45,7 @@ impl Element for Empty {
     }
 
     fn set_window_center(&mut self, _center: Vec2<i32>) {}
-    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg) {}
+    fn process_and_transmit_msg(&mut self, _msg: ActionMsg) {}
 }
 
 
@@ -146,9 +146,9 @@ impl Element for Layers {
         }
     }
 
-    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg) {
         for layer in &mut self.layers {
-            layer.process_and_transmit_msg(msg);
+            layer.process_and_transmit_msg(msg.clone());
         }
     }
 }
@@ -327,9 +327,9 @@ impl Element for List {
         }
     }
 
-    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg) {
         for el in &mut self.elements {
-            el.process_and_transmit_msg(msg);
+            el.process_and_transmit_msg(msg.clone());
         }
     }
 }
@@ -568,7 +568,7 @@ impl Element for Pad {
         self.element.set_window_center(center);
     }
 
-    fn process_and_transmit_msg(&mut self, msg: &ActionMsg) {
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg) {
         self.element.process_and_transmit_msg(msg);
     }
 }

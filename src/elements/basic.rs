@@ -116,7 +116,7 @@ impl Element for Label {
         self.global_center = center;
     }
 
-    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg){}
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg){}
 }
 
 impl Labelable for Label {
@@ -171,6 +171,8 @@ pub struct Button {
     id: String,
     senders: Vec<Sender<ActionMsg>>,
 
+    //receive_fn: Box<Fn(&mut Element, ActionMsg)>,
+
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
@@ -184,10 +186,12 @@ pub struct Button {
 impl Button {
     pub fn new() -> Box<Self> {
         let fun = Box::new(||{});
+        let rfun = Box::new(|_: &mut Element, _: ActionMsg|{});
 
         let button = Box::new(Button {
             id: "Button".to_string(),
             senders: Vec::new(),
+            //receive_fn: rfun,
 
             global_center: Vec2::zero(),
             frame: Frame::new(),
@@ -234,7 +238,7 @@ impl Clickable for Button {
 }
 
 
-impl Actionable for Button {
+impl ActionSendable for Button {
     fn with_id(mut self, id: String) -> Box<Self> {
         self.id = id;
         Box::new(self)
@@ -244,6 +248,15 @@ impl Actionable for Button {
         Box::new(self)
     }
 }
+
+/*
+impl ActionReceivable for Button {
+    fn with_action_receive(mut self, fun: Box<Fn(&mut Element, ActionMsg)>) -> Box<Self> {
+        self.receive_fn = fun;
+        Box::new(self)
+    }
+}
+*/
 
 
 impl Element for Button {
@@ -295,5 +308,7 @@ impl Element for Button {
         self.global_center = center;
     }
 
-    fn process_and_transmit_msg(&mut self, _msg: &ActionMsg) {}
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg) {
+        //(self.receive_fn)(&mut self, msg);
+    }
 }

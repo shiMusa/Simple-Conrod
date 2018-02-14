@@ -518,7 +518,7 @@ pub trait Element {
     }
 
     fn set_window_center(&mut self, center: Vec2<i32>);
-    fn process_and_transmit_msg(&mut self, msg: &ActionMsg);
+    fn process_and_transmit_msg(&mut self, msg: ActionMsg);
 }
 
 
@@ -591,11 +591,15 @@ pub struct ActionMsg{
 }
 
 
-pub trait Actionable {
+pub trait ActionSendable {
     fn with_id(self, id: String) -> Box<Self>;
     fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
 }
-
+/*
+pub trait ActionReceivable {
+    fn with_action_receive(self, fun: Box<Fn(&mut Self, ActionMsg)>) -> Box<Self>;
+}
+*/
 
 
 
@@ -841,11 +845,11 @@ impl BaseWindow {
                         Ok(msg) => {
                             println!("message received: {:?}", msg);
                             if let Some(ref mut el) = self.element {
-                                el.process_and_transmit_msg(&msg);
+                                el.process_and_transmit_msg(msg.clone());
                             }
                             update = true;
                             for sender in &mut self.senders {
-                                sender.send(msg.clone());
+                                let _ = sender.send(msg.clone());
                             }
                         },
                         _ => break 'receive

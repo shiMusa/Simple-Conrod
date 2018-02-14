@@ -39,6 +39,8 @@ fn main() {
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     base_window.add_receiver(base_receiver);
+
+    // broadcasting messages to other recievers
     base_window.add_sender(parallel_sender.clone());
 
     let mut layers = Layers::new();
