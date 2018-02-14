@@ -101,8 +101,18 @@ fn main() {
     );
 
     inner_layer.push(
-        Label::new_with_font_size("Your Ads here!".to_string(), 60)
-            .with_color(conrod::color::RED)
+        LabelSocket::new(
+            Label::new_with_font_size("Your Ads here!".to_string(), 60)
+                .with_color(conrod::color::RED)
+        ).with_action_receive(Box::new(|label, msg|{
+            println!("Label receives {:?}", msg.clone());
+            match (msg.sender_id.as_ref(), msg.msg) {
+                ("Action", ActionMsgData::Click) => {
+                    label.set_label("Yeäh!!!".to_string());
+                },
+                _ => ()
+            }
+        }))
     );
 
     list.push(inner_layer);

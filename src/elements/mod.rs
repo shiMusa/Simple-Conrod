@@ -518,7 +518,7 @@ pub trait Element {
     }
 
     fn set_window_center(&mut self, center: Vec2<i32>);
-    fn process_and_transmit_msg(&mut self, msg: ActionMsg);
+    fn transmit_msg(&mut self, msg: ActionMsg);
 }
 
 
@@ -528,10 +528,12 @@ pub trait Clickable {
 
 pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
+    fn set_label(&mut self, label: String);
 }
 
 pub trait Colorable {
     fn with_color(self, color: conrod::Color) -> Box<Self>;
+    fn set_color(&mut self, color: conrod::Color);
 }
 
 
@@ -542,6 +544,7 @@ pub enum Background {
 
 pub trait Backgroundable {
     fn with_background(self, bg: Background) -> Box<Self>;
+    fn set_background(&mut self, bg: Background);
 }
 
 
@@ -600,6 +603,11 @@ pub trait ActionReceivable {
     fn with_action_receive(self, fun: Box<Fn(&mut Self, ActionMsg)>) -> Box<Self>;
 }
 */
+
+pub trait Socket {
+    type E: Element;
+    fn with_action_receive(self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self>;
+}
 
 
 
@@ -845,7 +853,7 @@ impl BaseWindow {
                         Ok(msg) => {
                             println!("message received: {:?}", msg);
                             if let Some(ref mut el) = self.element {
-                                el.process_and_transmit_msg(msg.clone());
+                                el.transmit_msg(msg.clone());
                             }
                             update = true;
                             for sender in &mut self.senders {
