@@ -278,7 +278,7 @@ impl List {
         self.insert(0, element);
     }
 
-    pub fn insert(&mut self, index: usize, mut element: Box<Element>) {
+    pub fn insert(&mut self, index: usize, element: Box<Element>) {
 
         if index >= self.elements.len() {
             self.elements.push(element);

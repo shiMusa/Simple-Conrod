@@ -698,7 +698,7 @@ impl BaseWindow {
     }
 
 
-    pub fn add_element(&mut self, mut element: Box<Element>) {
+    pub fn add_element(&mut self, element: Box<Element>) {
         self.element = Some(element);
     }
 

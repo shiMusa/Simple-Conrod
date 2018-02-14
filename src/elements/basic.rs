@@ -373,7 +373,7 @@ impl Element for Button {
         self.frame = frame;
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg) { }
+    fn transmit_msg(&mut self, _msg: ActionMsg) { }
 }
 
 

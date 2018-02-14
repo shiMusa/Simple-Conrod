@@ -10,38 +10,15 @@ use elements::{*, container::*, basic::*};
 
 
 use std::sync::mpsc::{self, Sender, Receiver};
-use std::thread;
 
 
 
 fn main() {
 
 
-    let (parallel_sender, parallel_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-
-    let t = thread::spawn(move || {
-        use std::time::Duration;
-        loop {
-            if let Ok(msg) = parallel_receiver.try_recv() {
-                println!("parallel receiver: {:?}", msg);
-                match (msg.sender_id.as_ref(), msg.msg) {
-                    ("Stop", ActionMsgData::Click) => break,
-                    _ => (),
-                }
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
-        println!("parallel thread stopped.");
-    });
-
-
-
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     base_window.add_receiver(base_receiver);
-
-    // broadcasting messages to other recievers
-    base_window.add_sender(parallel_sender.clone());
 
     let mut layers = Layers::new();
 
@@ -61,8 +38,8 @@ fn main() {
                 .with_action_click(Box::new(move || {
                     println!("List -> List -> Pad -> Button");
                 }))
-                .with_label("Stop.".to_string())
-                .with_id("Stop".to_string())
+                .with_label("Hey".to_string())
+                .with_id("Hey".to_string())
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
             PadElementSize::Relative(0.5, 0.5)
@@ -105,13 +82,16 @@ fn main() {
             Label::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
+
             println!("Label receives {:?}", msg.clone());
+
             match (msg.sender_id.as_ref(), msg.msg) {
                 ("Action", ActionMsgData::Click) => {
                     label.set_label("Yeäh!!!".to_string());
                 },
                 _ => ()
             }
+
         }))
     );
 
@@ -126,8 +106,7 @@ fn main() {
             }))
             .with_color(conrod::color::LIGHT_GREEN)
             .with_id("Action".to_string())
-            .with_sender(base_sender)
-            .with_sender(parallel_sender), // sending double: via base_window and directly
+            .with_sender(base_sender),
         PadAlignment::Center,
         PadElementSize::Relative(0.5, 0.4)
     ));
@@ -136,5 +115,4 @@ fn main() {
     base_window.add_element(layers);
 
     base_window.run(-1f64);
-    let _ = t.join();
 }
