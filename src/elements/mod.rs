@@ -508,7 +508,7 @@ pub trait Element {
     fn build_window(&self, ui: &mut conrod::UiCell);
 
     fn get_frame(&self) -> Frame<i32>;
-    fn set_frame(&mut self, frame: Frame<i32>);
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>);
 
     fn get_min_size(&self) -> Vec2<i32> {
         Vec2::zero()
@@ -517,9 +517,8 @@ pub trait Element {
         Vec2{ x: i32::MAX, y: i32::MAX }
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>);
+    fn transmit_msg(&mut self, msg: ActionMsg);
 }
-
 
 
 pub trait Clickable {
@@ -528,10 +527,12 @@ pub trait Clickable {
 
 pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
+    fn set_label(&mut self, label: String);
 }
 
 pub trait Colorable {
     fn with_color(self, color: conrod::Color) -> Box<Self>;
+    fn set_color(&mut self, color: conrod::Color);
 }
 
 
@@ -542,7 +543,113 @@ pub enum Background {
 
 pub trait Backgroundable {
     fn with_background(self, bg: Background) -> Box<Self>;
+    fn set_background(&mut self, bg: Background);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+use std::sync::mpsc::{Sender, Receiver};
+
+
+#[derive(Debug, Clone)]
+pub enum ActionMsgData {
+    Click,
+    Text(String),
+    Exit,
+}
+
+#[derive(Debug, Clone)]
+pub struct ActionMsg{
+    pub sender_id: String,
+    pub msg: ActionMsgData
+}
+
+
+pub trait ActionSendable {
+    fn with_id(self, id: String) -> Box<Self>;
+    fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
+}
+/*
+pub trait ActionReceivable {
+    fn with_action_receive(self, fun: Box<Fn(&mut Self, ActionMsg)>) -> Box<Self>;
+}
+*/
+
+pub trait Socket {
+    type E: Element;
+    fn with_action_receive(self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self>;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -577,9 +684,9 @@ pub struct BaseWindow {
     image_map: conrod::image::Map<glium::texture::Texture2d>,
     ui: conrod::Ui,
 
-    window_center: Vec2<i32>,
-
     element: Option<Box<Element>>,
+    receiver: Option<Receiver<ActionMsg>>,
+    senders: Vec<Sender<ActionMsg>>,
 }
 
 impl BaseWindow {
@@ -590,16 +697,17 @@ impl BaseWindow {
         }
     }
 
-    /*
-    pub fn get_ui(&mut self) -> &mut conrod::Ui {
-        &mut self.ui
-    }
-    */
 
-
-    pub fn add_element(&mut self, mut element: Box<Element>) {
-        element.set_window_center(self.window_center);
+    pub fn add_element(&mut self, element: Box<Element>) {
         self.element = Some(element);
+    }
+
+    pub fn add_receiver(&mut self, receiver: Receiver<ActionMsg>) {
+        self.receiver = Some(receiver);
+    }
+
+    pub fn add_sender(&mut self, sender: Sender<ActionMsg>) {
+        self.senders.push(sender);
     }
 
 
@@ -644,7 +752,8 @@ impl BaseWindow {
             image_map,
             ui,
             element: None,
-            window_center: Vec2{x: (width as f64/2f64) as i32, y: (height as f64/2f64) as i32}
+            receiver: None,
+            senders: Vec::new(),
         }
     }
 
@@ -657,6 +766,8 @@ impl BaseWindow {
         // events
         let mut events = Vec::new();
         let mut t0 = time::precise_time_ns();
+
+        let mut window_frame = Frame::new();
 
         //println!("loop is starting ...............................");
         'render: loop {
@@ -687,7 +798,8 @@ impl BaseWindow {
                                 ..
                             } => break 'render,
                             WindowEvent::Resized(mut w, mut h) => {
-                                //println!("resized: ({}, {})",w,h);
+
+                                // TODO is this limit necessary?
                                 if let Some(ref mut el) = self.element {
                                     let min = el.get_min_size();
                                     let max = el.get_max_size();
@@ -697,11 +809,7 @@ impl BaseWindow {
                                     if h > max.y as u32 { h = max.y as u32; }
                                     if h < min.y as u32 { h = min.y as u32; }
 
-                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
-                                    el.set_frame(Frame::new_with_size(w as i32,h as i32));
-                                    el.set_window_center(self.window_center);
-                                } else {
-                                    self.window_center = Vec2{x: (w as f64/2f64) as i32, y: (h as f64/2f64) as i32};
+                                    window_frame = Frame::new_with_size(w as i32,h as i32);
                                 }
                             }
                             _ => (),
@@ -722,6 +830,7 @@ impl BaseWindow {
                 update = true;
             }
 
+            // check for fps forced update
             if fps > 0.0 {
                 let time_diff = time::precise_time_ns() - t0;
                 if time_diff >= dt_ns {
@@ -731,9 +840,29 @@ impl BaseWindow {
                 }
             }
 
+            // check if msg have to be processed
+            if let &Some(ref receiver) = &self.receiver {
+                'receive: loop {
+                    match receiver.try_recv() {
+                        Ok(msg) => {
+                            println!("message received: {:?}", msg);
+                            if let Some(ref mut el) = self.element {
+                                el.transmit_msg(msg.clone());
+                            }
+                            update = true;
+                            for sender in &mut self.senders {
+                                let _ = sender.send(msg.clone());
+                            }
+                        },
+                        _ => break 'receive
+                    }
+                }
+            }
+
             if update {
                 let ui = &mut self.ui.set_widgets();
                 if let Some(ref mut el) = self.element {
+                    el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui);
                 }
             }

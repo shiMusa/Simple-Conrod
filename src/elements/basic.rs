@@ -6,6 +6,27 @@ use conrod;
 
 use elements::*;
 
+use std::sync::mpsc::{Sender};
+
+
+
+
+
+const DEBUG: bool = true;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -53,7 +74,7 @@ impl Element for Label {
     }
 
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        use conrod::{widget, Positionable, Colorable, Widget, Borderable};
+        use conrod::{widget, Positionable, Colorable, Widget};
 
         if let Some(ref ids) = self.label_ids {
             let c = self.frame.center() - self.global_center;
@@ -80,8 +101,9 @@ impl Element for Label {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.frame = frame;
+        self.global_center = window_center;
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -91,15 +113,16 @@ impl Element for Label {
         Vec2{ x: i32::MAX, y: i32::MAX }
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
-    }
+    fn transmit_msg(&mut self, _msg: ActionMsg){}
 }
 
 impl Labelable for Label {
     fn with_label(mut self, label: String) -> Box<Self> {
         self.text = label;
         Box::new(self)
+    }
+    fn set_label(&mut self, label: String) {
+        self.text = label;
     }
 }
 
@@ -108,12 +131,18 @@ impl Colorable for Label {
         self.color = color;
         Box::new(self)
     }
+    fn set_color(&mut self, color: conrod::Color) {
+        self.color = color;
+    }
 }
 
 impl Backgroundable for Label {
     fn with_background(mut self, bg: Background) -> Box<Self> {
         self.background = bg;
         Box::new(self)
+    }
+    fn set_background(&mut self, bg: Background) {
+        self.background = bg;
     }
 }
 
@@ -122,6 +151,59 @@ impl Backgroundable for Label {
 
 
 
+pub struct LabelSocket {
+    label: Box<Label>,
+    receive: Box<Fn(&mut Label, ActionMsg)>,
+}
+impl LabelSocket {
+    pub fn new(label: Box<Label>) -> Box<Self> {
+        Box::new(LabelSocket {
+            label,
+            receive: Box::new(|_,_|{})
+        })
+    }
+}
+
+impl Socket for LabelSocket {
+    type E = Label;
+    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
+        self.receive = fun;
+        Box::new(self)
+    }
+}
+
+impl Element for LabelSocket {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.label.setup(ui);
+    }
+
+    fn stop(&self) {
+        self.label.stop();
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        self.label.build_window(ui);
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.label.get_frame()
+    }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.label.set_frame(frame, window_center);
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.label.get_min_size()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.label.get_max_size()
+    }
+
+    fn transmit_msg(&mut self, msg: ActionMsg) {
+        // first socket, then content
+        (self.receive)(&mut self.label, msg.clone());
+        self.label.transmit_msg(msg);
+    }
+}
 
 
 
@@ -148,8 +230,12 @@ widget_ids!(
 );
 
 
-
 pub struct Button {
+    id: String,
+    senders: Vec<Sender<ActionMsg>>,
+
+    //receive_fn: Box<Fn(&mut Element, ActionMsg)>,
+
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
@@ -164,14 +250,30 @@ impl Button {
     pub fn new() -> Box<Self> {
         let fun = Box::new(||{});
 
-        Box::new(Button {
+        let button = Box::new(Button {
+            id: "Button".to_string(),
+            senders: Vec::new(),
+            //receive_fn: rfun,
+
             global_center: Vec2::zero(),
             frame: Frame::new(),
             button_ids: None,
             click_fn: fun,
             color: conrod::color::GRAY,
             label: None,
-        })
+        });
+
+        if DEBUG { println!("{:?}", button); }
+        button
+    }
+}
+
+#[allow(unused_must_use)]
+impl Debug for Button {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        writeln!(f, "(Button {:?}) {} ", self.label, self.id);
+        writeln!(f, "    {:?}", self.frame);
+        writeln!(f, "    {:?}", self.color)
     }
 }
 
@@ -180,12 +282,18 @@ impl Colorable for Button {
         self.color = color;
         Box::new(self)
     }
+    fn set_color(&mut self, color: conrod::Color) {
+        self.color = color;
+    }
 }
 
 impl Labelable for Button {
     fn with_label(mut self, label: String) -> Box<Self> {
         self.label = Some(label);
         Box::new(self)
+    }
+    fn set_label(&mut self, label: String) {
+        self.label = Some(label);
     }
 }
 
@@ -196,6 +304,27 @@ impl Clickable for Button {
         Box::new(self)
     }
 }
+
+
+impl ActionSendable for Button {
+    fn with_id(mut self, id: String) -> Box<Self> {
+        self.id = id;
+        Box::new(self)
+    }
+    fn with_sender(mut self, sender: Sender<ActionMsg>) -> Box<Self> {
+        self.senders.push(sender);
+        Box::new(self)
+    }
+}
+
+/*
+impl ActionReceivable for Button {
+    fn with_action_receive(mut self, fun: Box<Fn(&mut Element, ActionMsg)>) -> Box<Self> {
+        self.receive_fn = fun;
+        Box::new(self)
+    }
+}
+*/
 
 
 impl Element for Button {
@@ -222,6 +351,15 @@ impl Element for Button {
             let mut event = button.set(ids.button, ui);
 
             if event.was_clicked() {
+                // broadcast click action
+                for sender in &self.senders {
+                    let _ = sender.send(ActionMsg{
+                        sender_id: self.id.clone(),
+                        msg: ActionMsgData::Click,
+                    });
+                }
+
+                // execute custom function
                 (self.click_fn)();
             }
         }
@@ -230,11 +368,71 @@ impl Element for Button {
     fn get_frame(&self) -> Frame<i32> {
         self.frame
     }
-    fn set_frame(&mut self, frame: Frame<i32>) {
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
         self.frame = frame;
     }
 
-    fn set_window_center(&mut self, center: Vec2<i32>) {
-        self.global_center = center;
+    fn transmit_msg(&mut self, _msg: ActionMsg) { }
+}
+
+
+
+
+
+
+
+
+pub struct ButtonSocket {
+    button: Box<Button>,
+    receive: Box<Fn(&mut Button, ActionMsg)>,
+}
+impl ButtonSocket {
+    pub fn new(button: Box<Button>) -> Box<Self> {
+        Box::new(ButtonSocket {
+            button,
+            receive: Box::new(|_,_|{})
+        })
+    }
+}
+
+impl Socket for ButtonSocket {
+    type E = Button;
+    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
+        self.receive = fun;
+        Box::new(self)
+    }
+}
+
+impl Element for ButtonSocket {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.button.setup(ui);
+    }
+
+    fn stop(&self) {
+        self.button.stop();
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        self.button.build_window(ui);
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.button.get_frame()
+    }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.button.set_frame(frame, window_center);
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.button.get_min_size()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.button.get_max_size()
+    }
+
+    fn transmit_msg(&mut self, msg: ActionMsg) {
+        // first socket, then content
+        (self.receive)(&mut self.button, msg.clone());
+        self.button.transmit_msg(msg);
     }
 }
