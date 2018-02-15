@@ -28,7 +28,7 @@ fn main() {
 
     sublist.push(
         Button::new()
-            .with_action_click(Box::new(move || {
+            .with_action_click(Box::new(|| {
                 println!("List -> List -> Button 1");
             }))
             .with_label("Delete".to_string())
@@ -38,7 +38,7 @@ fn main() {
     sublist.push(
         Pad::new(
             Button::new()
-                .with_action_click(Box::new(move || {
+                .with_action_click(Box::new(|| {
                     println!("List -> List -> Pad -> Button");
                 }))
                 .with_label("Hey".to_string())
