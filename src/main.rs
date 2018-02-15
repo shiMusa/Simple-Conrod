@@ -6,7 +6,7 @@ pub mod elements;
 extern crate time;
 extern crate num;
 
-use elements::{*, container::*, basic::*};
+use elements::{*, container::*, basic::*, action::*};
 
 
 use std::sync::mpsc::{self, Sender, Receiver};
@@ -53,6 +53,9 @@ fn main() {
             .with_action_click(Box::new(|| {
                 println!("List -> List -> Button 2");
             }))
+            .with_label("Add".to_string())
+            .with_id("Add".to_string())
+            .with_sender(base_sender.clone())
     );
     list.push(sublist);
 
@@ -81,7 +84,7 @@ fn main() {
     );
 
     inner_layer.push(
-        LabelSocket::new(
+        Socket::new(
             Label::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
@@ -99,7 +102,21 @@ fn main() {
     );
 
     list.push(inner_layer);
-    layers.push(list);
+    layers.push(
+        Socket::new(list)
+            .with_action_receive(Box::new(|list, msg|{
+                match (msg.sender_id.as_ref(), msg.msg) {
+                    ("Delete", ActionMsgData::Click) => {
+                        let _ = list.pop();
+                    },
+                    ("Add", ActionMsgData::Click) => {
+                        list.push(Label::new_with_font_size("one more time!".to_string(), 42)
+                            .with_background(Background::Color(conrod::color::LIGHT_YELLOW)))
+                    }
+                    _ => ()
+                }
+            }))
+    );
 
 
     layers.push(Pad::new(

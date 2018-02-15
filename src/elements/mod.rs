@@ -2,6 +2,7 @@
 
 pub mod container;
 pub mod basic;
+pub mod action;
 
 
 use conrod;
@@ -10,6 +11,7 @@ use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
+use std::sync::mpsc::{Sender, Receiver};
 
 
 
@@ -18,7 +20,7 @@ const DEBUG: bool = false;
 
 
 
-
+use elements::action::*;
 
 
 
@@ -234,6 +236,18 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         }
 
         self.rescale_elements();
+    }
+
+    pub fn pop(&mut self) -> Option<RingElement<T>> {
+        let el = self.elements.pop();
+        self.rescale_elements();
+        el
+    }
+
+    pub fn remove(&mut self, index: usize) -> RingElement<T> {
+        let el = self.elements.remove(index);
+        self.rescale_elements();
+        el
     }
 
     pub fn resize(&mut self, size: T) {
@@ -503,6 +517,7 @@ use std::i32;
 
 pub trait Element {
     fn setup(&mut self, ui: &mut conrod::Ui);
+    fn is_setup(&self) -> bool;
 
     fn stop(&self) {}
     fn build_window(&self, ui: &mut conrod::UiCell);
@@ -545,111 +560,6 @@ pub trait Backgroundable {
     fn with_background(self, bg: Background) -> Box<Self>;
     fn set_background(&mut self, bg: Background);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-use std::sync::mpsc::{Sender, Receiver};
-
-
-#[derive(Debug, Clone)]
-pub enum ActionMsgData {
-    Click,
-    Text(String),
-    Exit,
-}
-
-#[derive(Debug, Clone)]
-pub struct ActionMsg{
-    pub sender_id: String,
-    pub msg: ActionMsgData
-}
-
-
-pub trait ActionSendable {
-    fn with_id(self, id: String) -> Box<Self>;
-    fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
-}
-/*
-pub trait ActionReceivable {
-    fn with_action_receive(self, fun: Box<Fn(&mut Self, ActionMsg)>) -> Box<Self>;
-}
-*/
-
-pub trait Socket {
-    type E: Element;
-    fn with_action_receive(self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self>;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -845,7 +755,7 @@ impl BaseWindow {
                 'receive: loop {
                     match receiver.try_recv() {
                         Ok(msg) => {
-                            println!("message received: {:?}", msg);
+                            if DEBUG { println!("message received: {:?}", msg); }
                             if let Some(ref mut el) = self.element {
                                 el.transmit_msg(msg.clone());
                             }
@@ -860,6 +770,12 @@ impl BaseWindow {
             }
 
             if update {
+                if let Some(ref mut el) = self.element {
+                    if !el.is_setup() {
+                        el.setup(&mut self.ui);
+                    }
+                }
+
                 let ui = &mut self.ui.set_widgets();
                 if let Some(ref mut el) = self.element {
                     el.set_frame(window_frame, window_frame.center());
