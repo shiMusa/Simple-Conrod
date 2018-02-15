@@ -6,7 +6,7 @@ pub mod elements;
 extern crate time;
 extern crate num;
 
-use elements::{*, container::*, basic::*};
+use elements::{*, container::*, basic::*, action::*};
 
 
 use std::sync::mpsc::{self, Sender, Receiver};
@@ -110,7 +110,7 @@ fn main() {
                         let _ = list.pop();
                     },
                     ("Add", ActionMsgData::Click) => {
-                        list.push(Label::new("one more time!".to_string())
+                        list.push(Label::new_with_font_size("one more time!".to_string(), 42)
                             .with_background(Background::Color(conrod::color::LIGHT_YELLOW)))
                     }
                     _ => ()

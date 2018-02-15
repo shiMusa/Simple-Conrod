@@ -2,6 +2,7 @@
 
 pub mod container;
 pub mod basic;
+pub mod action;
 
 
 use conrod;
@@ -10,6 +11,7 @@ use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
+use std::sync::mpsc::{Sender, Receiver};
 
 
 
@@ -18,7 +20,7 @@ const DEBUG: bool = false;
 
 
 
-
+use elements::action::*;
 
 
 
@@ -515,6 +517,7 @@ use std::i32;
 
 pub trait Element {
     fn setup(&mut self, ui: &mut conrod::Ui);
+    fn is_setup(&self) -> bool;
 
     fn stop(&self) {}
     fn build_window(&self, ui: &mut conrod::UiCell);
@@ -557,159 +560,6 @@ pub trait Backgroundable {
     fn with_background(self, bg: Background) -> Box<Self>;
     fn set_background(&mut self, bg: Background);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-use std::sync::mpsc::{Sender, Receiver};
-
-
-#[derive(Debug, Clone)]
-pub enum ActionMsgData {
-    Click,
-    Text(String),
-    Exit,
-}
-
-#[derive(Debug, Clone)]
-pub struct ActionMsg {
-    pub sender_id: String,
-    pub msg: ActionMsgData
-}
-
-
-pub trait ActionSendable {
-    fn with_id(self, id: String) -> Box<Self>;
-    fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-pub struct Socket<E: Element> {
-    element: Box<E>,
-    receive: Box<Fn(&mut E, ActionMsg)>
-}
-impl<E> Socket<E> where E: Element {
-    pub fn new(element: Box<E>) -> Box<Self> {
-        Box::new(Socket {
-            element,
-            receive: Box::new(|_,_|{})
-        })
-    }
-
-    pub fn with_action_receive(mut self, fun: Box<Fn(&mut E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl<E> Element for Socket<E> where E: Element {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.element.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.element.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.element.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.element.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.element.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.element.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.element.get_max_size()
-    }
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.element, msg.clone());
-        self.element.transmit_msg(msg);
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -905,7 +755,7 @@ impl BaseWindow {
                 'receive: loop {
                     match receiver.try_recv() {
                         Ok(msg) => {
-                            println!("message received: {:?}", msg);
+                            if DEBUG { println!("message received: {:?}", msg); }
                             if let Some(ref mut el) = self.element {
                                 el.transmit_msg(msg.clone());
                             }
@@ -920,6 +770,12 @@ impl BaseWindow {
             }
 
             if update {
+                if let Some(ref mut el) = self.element {
+                    if !el.is_setup() {
+                        el.setup(&mut self.ui);
+                    }
+                }
+
                 let ui = &mut self.ui.set_widgets();
                 if let Some(ref mut el) = self.element {
                     el.set_frame(window_frame, window_frame.center());

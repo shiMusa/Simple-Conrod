@@ -3,7 +3,7 @@
 
 use conrod;
 
-use elements::*;
+use elements::{*, action::*};
 
 
 
@@ -41,19 +41,23 @@ const DEBUG: bool = false;
 
 
 pub struct Empty {
+    is_setup: bool,
     frame: Frame<i32>,
     window_center: Vec2<i32>
 }
 impl Empty {
     pub fn new() -> Box<Self> {
         Box::new(Empty{
+            is_setup: false,
             frame: Frame::new(),
             window_center: Vec2::zero()
         })
     }
 }
 impl Element for Empty {
-    fn setup(&mut self, _ui: &mut conrod::Ui) {}
+    fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
+    fn is_setup(&self) -> bool { self.is_setup }
+
     fn build_window(&self, _ui: &mut conrod::UiCell) {}
 
     fn get_frame(&self) -> Frame<i32> { self.frame }
@@ -84,6 +88,7 @@ impl Element for Empty {
 pub struct Layers {
     layers: Vec<Box<Element>>,
 
+    is_setup: bool,
     frame: Frame<i32>,
 }
 
@@ -91,12 +96,14 @@ impl Layers {
     pub fn new() -> Box<Self> {
         Box::new(Layers {
             layers: Vec::new(),
+            is_setup: false,
             frame: Frame::new()
         })
     }
 
     pub fn push(&mut self, element: Box<Element>) {
         self.layers.push(element);
+        self.is_setup = false;
     }
 
     pub fn insert(&mut self, index: usize, element: Box<Element>) {
@@ -105,14 +112,26 @@ impl Layers {
         } else {
             self.layers.insert(index, element);
         }
+        self.is_setup = false;
     }
 }
 
 impl Element for Layers {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         for el in &mut self.layers {
-            el.setup(ui);
+            if !el.is_setup() {
+                el.setup(ui);
+            }
         }
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        let mut setup = self.is_setup;
+        for el in &self.layers {
+            if !el.is_setup() { setup = false; }
+        }
+        if DEBUG { println!("is layers setup? {}",setup); }
+        setup
     }
 
     fn stop(&self) {
@@ -200,6 +219,7 @@ pub struct List {
     ring: Ring<i32>,
     alignment: ListAlignment,
 
+    is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 }
@@ -210,6 +230,7 @@ impl List {
             elements: Vec::new(),
             ring: Ring::new(),
             alignment,
+            is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
         })
@@ -232,6 +253,7 @@ impl List {
         if DEBUG { println!("... inserting into ring done.");}
 
         self.rescale_elements();
+        self.is_setup = false;
     }
 
     pub fn pop(&mut self) -> Option<Box<Element>> {
@@ -279,8 +301,17 @@ impl List {
 impl Element for List {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         for el in &mut self.elements {
-            el.setup(ui);
+            if !el.is_setup() { el.setup(ui); }
         }
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        let mut setup = self.is_setup;
+        for el in &self.elements {
+            if !el.is_setup() { setup = false; }
+        }
+        if DEBUG { println!("List is setup? {}", setup); }
+        setup
     }
 
     fn stop(&self) {
@@ -408,6 +439,7 @@ pub struct Pad {
     pad_size: PadElementSize,
     alignment: PadAlignment,
 
+    is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
@@ -422,6 +454,7 @@ impl Pad {
             element,
             alignment,
             pad_size: size,
+            is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
             ids: None,
@@ -443,7 +476,11 @@ impl Backgroundable for Pad {
 impl Element for Pad {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.ids = Some(PadIds::new(ui.widget_id_generator()));
-        self.element.setup(ui);
+        if !self.element.is_setup() { self.element.setup(ui); }
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        self.is_setup && self.element.is_setup()
     }
 
     fn stop(&self) {
