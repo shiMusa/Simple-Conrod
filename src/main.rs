@@ -21,7 +21,7 @@ fn main() {
     base_window.add_receiver(base_receiver);
 
     let mut layers = Layers::new();
-
+    
     let mut list = List::new(ListAlignment::Vertical);
 
     let mut sublist = List::new(ListAlignment::Horizontal);
@@ -30,7 +30,10 @@ fn main() {
         Button::new()
             .with_action_click(Box::new(move || {
                 println!("List -> List -> Button 1");
-            })),
+            }))
+            .with_label("Delete".to_string())
+            .with_id("Delete".to_string())
+            .with_sender(base_sender.clone()),
     );
     sublist.push(
         Pad::new(

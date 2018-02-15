@@ -40,7 +40,6 @@ const DEBUG: bool = false;
 
 
 
-
 pub struct Empty {
     frame: Frame<i32>,
     window_center: Vec2<i32>
@@ -375,11 +374,19 @@ impl Element for List {
             let tmp = el.get_max_size();
             match self.alignment {
                 ListAlignment::Horizontal => {
-                    max.x += tmp.x;
+                    max.x = if tmp.x == i32::MAX {
+                        i32::MAX
+                    } else {
+                        max.x + tmp.x
+                    };
                     if max.y > tmp.y { max.y = tmp.y; }
                 },
                 ListAlignment::Vertical   => {
-                    max.y += tmp.y;
+                    max.y = if tmp.y == i32::MAX {
+                        i32::MAX
+                    } else {
+                        max.y + tmp.y
+                    };
                     if max.x < tmp.x { max.x = tmp.x; }
                 },
             }
