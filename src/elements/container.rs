@@ -168,63 +168,6 @@ impl Element for Layers {
 
 
 
-pub struct LayersSocket {
-    layers: Box<Layers>,
-    receive: Box<Fn(&mut Layers, ActionMsg)>,
-}
-impl LayersSocket {
-    pub fn new(layers: Box<Layers>) -> Box<Self> {
-        Box::new(LayersSocket {
-            layers,
-            receive: Box::new(|_,_|{})
-        })
-    }
-}
-
-impl Socket for LayersSocket {
-    type E = Layers;
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl Element for LayersSocket {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.layers.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.layers.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.layers.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.layers.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.layers.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.layers.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.layers.get_max_size()
-    }
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.layers, msg.clone());
-        self.layers.transmit_msg(msg);
-    }
-}
-
-
-
-
-
 
 
 
@@ -273,8 +216,8 @@ impl List {
     }
 
     pub fn push(&mut self, element: Box<Element>) {
-        //let n = self.elements.len();
-        self.insert(0, element);
+        let n = self.elements.len();
+        self.insert(n, element);
     }
 
     pub fn insert(&mut self, index: usize, element: Box<Element>) {
@@ -291,13 +234,22 @@ impl List {
         self.rescale_elements();
     }
 
+    pub fn pop(&mut self) -> Option<Box<Element>> {
+        let el = self.elements.pop();
+        let _ = self.ring.pop();
+        self.rescale_elements();
+        el
+    }
+
     fn rescale_elements(&mut self) {
         if DEBUG { println!("rescaling...");}
+
+        let n = self.elements.len();
 
         match self.alignment {
             ListAlignment::Horizontal => {
                 self.ring.resize(self.frame.width());
-                for ix in 0..self.elements.len() {
+                for ix in 0..n {
                     let el = &mut self.elements[ix];
                     let x0 = self.ring.get_sum(ix);
                     let x1 = self.ring.get_sum(ix+1);
@@ -308,9 +260,9 @@ impl List {
                 }
             },
             ListAlignment::Vertical => {
-                for ix in 0..self.elements.len() {
+                for ix in 0..n {
                     self.ring.resize(self.frame.height());
-                    let el = &mut self.elements[ix];
+                    let el = &mut self.elements[n-1-ix];
                     let y0 = self.ring.get_sum(ix);
                     let y1 = self.ring.get_sum(ix+1);
                     el.set_frame(Frame{
@@ -398,63 +350,6 @@ impl Element for List {
         for el in &mut self.elements {
             el.transmit_msg(msg.clone());
         }
-    }
-}
-
-
-
-
-
-pub struct ListSocket {
-    list: Box<List>,
-    receive: Box<Fn(&mut List, ActionMsg)>,
-}
-impl ListSocket {
-    pub fn new(list: Box<List>) -> Box<Self> {
-        Box::new(ListSocket {
-            list,
-            receive: Box::new(|_,_|{})
-        })
-    }
-}
-
-impl Socket for ListSocket {
-    type E = List;
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl Element for ListSocket {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.list.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.list.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.list.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.list.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.list.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.list.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.list.get_max_size()
-    }
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.list, msg.clone());
-        self.list.transmit_msg(msg);
     }
 }
 
@@ -698,58 +593,3 @@ impl Element for Pad {
 
 
 
-
-
-
-pub struct PadSocket {
-    pad: Box<Pad>,
-    receive: Box<Fn(&mut Pad, ActionMsg)>,
-}
-impl PadSocket {
-    pub fn new(pad: Box<Pad>) -> Box<Self> {
-        Box::new(PadSocket {
-            pad,
-            receive: Box::new(|_,_|{})
-        })
-    }
-}
-
-impl Socket for PadSocket {
-    type E = Pad;
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl Element for PadSocket {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.pad.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.pad.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.pad.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.pad.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.pad.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.pad.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.pad.get_max_size()
-    }
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.pad, msg.clone());
-        self.pad.transmit_msg(msg);
-    }
-}

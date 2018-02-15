@@ -151,65 +151,6 @@ impl Backgroundable for Label {
 
 
 
-pub struct LabelSocket {
-    label: Box<Label>,
-    receive: Box<Fn(&mut Label, ActionMsg)>,
-}
-impl LabelSocket {
-    pub fn new(label: Box<Label>) -> Box<Self> {
-        Box::new(LabelSocket {
-            label,
-            receive: Box::new(|_,_|{})
-        })
-    }
-}
-
-impl Socket for LabelSocket {
-    type E = Label;
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl Element for LabelSocket {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.label.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.label.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.label.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.label.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.label.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.label.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.label.get_max_size()
-    }
-
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.label, msg.clone());
-        self.label.transmit_msg(msg);
-    }
-}
-
-
-
-
-
-
 
 
 
@@ -317,14 +258,6 @@ impl ActionSendable for Button {
     }
 }
 
-/*
-impl ActionReceivable for Button {
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Element, ActionMsg)>) -> Box<Self> {
-        self.receive_fn = fun;
-        Box::new(self)
-    }
-}
-*/
 
 
 impl Element for Button {
@@ -374,65 +307,4 @@ impl Element for Button {
     }
 
     fn transmit_msg(&mut self, _msg: ActionMsg) { }
-}
-
-
-
-
-
-
-
-
-pub struct ButtonSocket {
-    button: Box<Button>,
-    receive: Box<Fn(&mut Button, ActionMsg)>,
-}
-impl ButtonSocket {
-    pub fn new(button: Box<Button>) -> Box<Self> {
-        Box::new(ButtonSocket {
-            button,
-            receive: Box::new(|_,_|{})
-        })
-    }
-}
-
-impl Socket for ButtonSocket {
-    type E = Button;
-    fn with_action_receive(mut self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self> {
-        self.receive = fun;
-        Box::new(self)
-    }
-}
-
-impl Element for ButtonSocket {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.button.setup(ui);
-    }
-
-    fn stop(&self) {
-        self.button.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.button.build_window(ui);
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.button.get_frame()
-    }
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        self.button.set_frame(frame, window_center);
-    }
-
-    fn get_min_size(&self) -> Vec2<i32> {
-        self.button.get_min_size()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        self.button.get_max_size()
-    }
-
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        // first socket, then content
-        (self.receive)(&mut self.button, msg.clone());
-        self.button.transmit_msg(msg);
-    }
 }

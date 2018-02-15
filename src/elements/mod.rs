@@ -236,6 +236,18 @@ impl<T> Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
         self.rescale_elements();
     }
 
+    pub fn pop(&mut self) -> Option<RingElement<T>> {
+        let el = self.elements.pop();
+        self.rescale_elements();
+        el
+    }
+
+    pub fn remove(&mut self, index: usize) -> RingElement<T> {
+        let el = self.elements.remove(index);
+        self.rescale_elements();
+        el
+    }
+
     pub fn resize(&mut self, size: T) {
         self.size = size;
         self.rescale_elements();
@@ -587,7 +599,7 @@ pub enum ActionMsgData {
 }
 
 #[derive(Debug, Clone)]
-pub struct ActionMsg{
+pub struct ActionMsg {
     pub sender_id: String,
     pub msg: ActionMsgData
 }
@@ -597,19 +609,67 @@ pub trait ActionSendable {
     fn with_id(self, id: String) -> Box<Self>;
     fn with_sender(self, sender: Sender<ActionMsg>) -> Box<Self>;
 }
-/*
-pub trait ActionReceivable {
-    fn with_action_receive(self, fun: Box<Fn(&mut Self, ActionMsg)>) -> Box<Self>;
+
+
+
+
+
+
+
+
+
+
+
+
+pub struct Socket<E: Element> {
+    element: Box<E>,
+    receive: Box<Fn(&mut E, ActionMsg)>
 }
-*/
+impl<E> Socket<E> where E: Element {
+    pub fn new(element: Box<E>) -> Box<Self> {
+        Box::new(Socket {
+            element,
+            receive: Box::new(|_,_|{})
+        })
+    }
 
-pub trait Socket {
-    type E: Element;
-    fn with_action_receive(self, fun: Box<Fn(&mut Self::E, ActionMsg)>) -> Box<Self>;
+    pub fn with_action_receive(mut self, fun: Box<Fn(&mut E, ActionMsg)>) -> Box<Self> {
+        self.receive = fun;
+        Box::new(self)
+    }
 }
 
+impl<E> Element for Socket<E> where E: Element {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.element.setup(ui);
+    }
 
+    fn stop(&self) {
+        self.element.stop();
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        self.element.build_window(ui);
+    }
 
+    fn get_frame(&self) -> Frame<i32> {
+        self.element.get_frame()
+    }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.element.set_frame(frame, window_center);
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.element.get_min_size()
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.element.get_max_size()
+    }
+    fn transmit_msg(&mut self, msg: ActionMsg) {
+        // first socket, then content
+        (self.receive)(&mut self.element, msg.clone());
+        self.element.transmit_msg(msg);
+    }
+}
 
 
 
