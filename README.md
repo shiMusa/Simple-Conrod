@@ -8,6 +8,8 @@ Example can be found in main() function.
 For now, only a few visible elements like Button and Label are implemented. But the idea is that it should be relatively easy to create new elements which can be immediately included in you gui-design.
 Check back in future for more stuff :3
 
+Also: <b>There's much more already</b> than what's explained down below! check out the ```main()``` function!
+
 # Adding Elements
 
 <i>Before we start, let me say that you can also add and remove Elements dynamically during runtime!
