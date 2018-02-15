@@ -48,7 +48,7 @@ want to update dynamic content (real-time data, games ;)
 # Actions (Events)
 
 We can also use an event-system!
-This is using the channel-system on the ```channel```-system. So that means, that 
+This is using the ```channel```-system. So that means, that 
 signals from and to the gui are multi-threading enabled. Eg. you can run the gui in its own thread
 while your model runs on another thread!
 
@@ -73,7 +73,7 @@ base_window.add_receiver(receiver);
 which will transmit the messages down the chain of Elements.
 For an Element to receive a message, we need to wrap it in an <i>Socket</i>
 ```rust
-let socket = Socket::new(/* some element */)
+let socket = Socket::new(some_element /*Button, Label, List...*/)
     .with_action_receive(Box::new(|element, msg|{
         match (msg.sender_id.as_ref(), msg.msg) {
             /* match messages */
