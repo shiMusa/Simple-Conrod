@@ -3,6 +3,16 @@ A simple, user-friendly and multi-threading enabled gui-framework in <b>Rust</b>
 Example can be found in main() function.
 <b>heavy WIP!</b>
 
+Already implemented:
+ - Button
+ - Label
+ - Containers:
+   - List (horizontal, vertical)
+   - Pad (for padding an element and positioning inside a cell)
+   - Layers (for layering elements on top of each other, like in a graphics application)
+   - Empty
+ - Socket (for receiving Actions/Events)
+
 # Preamble
 
 For now, only a few visible elements like Button and Label are implemented. But the idea is that it should be relatively easy to create new elements which can be immediately included in you gui-design.
