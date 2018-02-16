@@ -118,7 +118,7 @@ impl Element for Label {
         Vec2{ x: i32::MAX, y: i32::MAX }
     }
 
-    fn transmit_msg(&mut self, _msg: ActionMsg){}
+    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool){}
 }
 
 impl Labelable for Label {
@@ -315,5 +315,5 @@ impl Element for Button {
         self.frame = frame;
     }
 
-    fn transmit_msg(&mut self, _msg: ActionMsg) { }
+    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) { }
 }

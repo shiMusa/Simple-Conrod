@@ -67,7 +67,7 @@ impl Element for Empty {
 
     }
 
-    fn transmit_msg(&mut self, _msg: ActionMsg) {}
+    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) {}
 }
 
 
@@ -177,9 +177,11 @@ impl Element for Layers {
         res
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        for layer in &mut self.layers {
-            layer.transmit_msg(msg.clone());
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        if !stop {
+            for layer in &mut self.layers {
+                layer.transmit_msg(msg.clone(), false);
+            }
         }
     }
 }
@@ -377,9 +379,11 @@ impl Element for List {
         max
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        for el in &mut self.elements {
-            el.transmit_msg(msg.clone());
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        if !stop {
+            for el in &mut self.elements {
+                el.transmit_msg(msg.clone(), false);
+            }
         }
     }
 }
@@ -623,8 +627,8 @@ impl Element for Pad {
         self.element.get_max_size()
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg) {
-        self.element.transmit_msg(msg);
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        if !stop { self.element.transmit_msg(msg, false); }
     }
 }
 

@@ -552,7 +552,7 @@ pub trait Element {
         Vec2{ x: i32::MAX, y: i32::MAX }
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg);
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool);
 }
 
 
@@ -777,7 +777,7 @@ impl BaseWindow {
                         Ok(msg) => {
                             if DEBUG { println!("message received: {:?}", msg); }
                             if let Some(ref mut el) = self.element {
-                                el.transmit_msg(msg.clone());
+                                el.transmit_msg(msg.clone(), false);
                             }
                             update = true;
                             for sender in &mut self.senders {

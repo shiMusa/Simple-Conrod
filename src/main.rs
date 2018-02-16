@@ -27,11 +27,16 @@ fn main() {
 
     sublist.push(
         Button::new()
+            // custon action...
             .with_action_click(Box::new(|| {
                 println!("List -> List -> Button 1");
             }))
             .with_label("Delete".to_string())
+            // we need to define an id if we want to identify the button
             .with_id("Delete".to_string())
+            // this sender will send the signals of the button
+            // to the main window, which in turn will
+            // transmit it down the chain of elements
             .with_sender(base_sender.clone()),
     );
     sublist.push(
@@ -83,7 +88,7 @@ fn main() {
     );
 
     inner_layer.push(
-        Socket::new(
+        Socket::new().with_element(
             Label::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
@@ -101,8 +106,30 @@ fn main() {
     );
 
     list.push(inner_layer);
+
+
+    // A Link enables us to connect many wrappers around the same Element
+    // Here, it's just another Socket - for now.
+    // But in future, you'll be able to connect e.g. animations to
+    // the same element!
+    // For an Element to be part of a Link, it must also implement
+    // the "Linkable" trait.
+    let mut link =Link::new(
+        Button::new()
+            .with_label("linked button".to_string())
+            .with_color(conrod::color::LIGHT_BROWN)
+    );
+    link.push(Socket::new()
+        .with_action_receive(Box::new(|_button, msg| {
+            println!("linked button Socket {:?}", msg);
+        }))
+    );
+    list.push(link);
+
+
+
     layers.push(
-        Socket::new(list)
+        Socket::new().with_element(list)
             .with_action_receive(Box::new(|list, msg|{
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
@@ -120,6 +147,7 @@ fn main() {
 
     layers.push(Pad::new(
         Button::new()
+            .with_label("action".to_string())
             .with_action_click(Box::new(||{
                 println!("Äktschöööööön!!!!");
             }))
