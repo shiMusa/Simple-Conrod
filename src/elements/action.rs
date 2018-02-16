@@ -72,9 +72,23 @@ pub trait ActionSendable {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 use time::precise_time_ns;
-
-
 
 
 
@@ -88,15 +102,19 @@ pub trait Animateable : Element {
 }
 
 
-
-
-
-
 pub enum AnimationFunction {
     Size(Box<Fn(f64) -> (Dim,Dim)>),
     Position(Box<Fn(f64) -> (Dim,Dim)>),
     None
 }
+
+
+
+
+
+
+
+
 
 
 
