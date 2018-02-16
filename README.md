@@ -67,7 +67,9 @@ Senders can be added to the elements via ```.with_sender(...)```, e.g.
 use std::sync::mpsc::{self, Sender, Receiver};
 
 let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-let button = Button::new().with_sender(sender);
+let button = Button::new()
+                 .with_id("Button".to_string()) // define id to recognize sender
+                 .with_sender(sender);
 ```
 These channels use the ```ActionMsg``` enum as information-carrier. You can also define a custom action-function:
 ```rust
