@@ -18,12 +18,14 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 fn main() {
 
-    let action = Action::new();
-    println!("action {}", action());
-    println!("action {}", action());
-    println!("action {}", action());
-    println!("action {}", action());
-    println!("action {}", action());
+    let animation = Animation::new();
+    let mut button = Button::new();
+    animation(&mut *button, ActionMsg::empty());
+    animation(&mut *button, ActionMsg::empty());
+    animation(&mut *button, ActionMsg::empty());
+    animation(&mut *button, ActionMsg::empty());
+    animation(&mut *button, ActionMsg::empty());
+    animation(&mut *button, ActionMsg::empty());
 
 
 
@@ -123,7 +125,7 @@ fn main() {
 
     layers.push(
         Socket::new(list)
-            .with_action_receive(Box::new(|list: &mut Box<List>, msg: ActionMsg|{
+            .with_action_receive(Box::new(|list: &mut List, msg: ActionMsg|{
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
                         let _ = list.pop();

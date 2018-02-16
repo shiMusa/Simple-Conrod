@@ -216,6 +216,34 @@ impl Button {
     }
 }
 
+
+
+
+
+
+impl Animateable for Button {
+    fn is_size_animateable(&self) -> bool {
+        true
+    }
+    fn is_position_animateable(&self) -> bool {
+        true
+    }
+
+    fn animate_size(&mut self, x: Dim, y: Dim) {
+
+    }
+    fn animate_position(&mut self, x: Dim, y: Dim) {
+
+    }
+}
+
+
+
+
+
+
+
+
 #[allow(unused_must_use)]
 impl Debug for Button {
     fn fmt(&self, f: &mut Formatter) -> Result {

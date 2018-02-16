@@ -41,12 +41,22 @@ pub enum ActionMsgData {
     F32(f32),
     Usize(usize),
     Exit,
+
+    None,
 }
 
 #[derive(Debug, Clone)]
 pub struct ActionMsg {
     pub sender_id: String,
     pub msg: ActionMsgData
+}
+impl ActionMsg {
+    pub fn empty() -> Self {
+        ActionMsg {
+            sender_id: "".to_string(),
+            msg: ActionMsgData::None
+        }
+    }
 }
 
 
@@ -66,33 +76,64 @@ use time::precise_time_ns;
 
 
 
-pub struct Action<E: Element> {
-    start_time: u64
+
+
+
+pub trait Animateable : Element {
+    fn is_size_animateable(&self) -> bool;
+    fn is_position_animateable(&self) -> bool;
+
+    fn animate_size(&mut self, x: Dim, y: Dim);
+    fn animate_position(&mut self, x: Dim, y: Dim);
 }
 
-impl<E> Action<E> where E: Element {
+
+
+
+
+
+pub enum AnimationFunction {
+    Size(Box<Fn(f64) -> (Dim,Dim)>),
+    Position(Box<Fn(f64) -> (Dim,Dim)>),
+    None
+}
+
+
+
+pub struct Animation {
+    start_time: u64,
+    function: AnimationFunction
+}
+
+impl Animation {
     pub fn new() -> Self {
-        Action { start_time: precise_time_ns()}
+        Animation {
+            start_time: precise_time_ns(),
+            function: AnimationFunction::None
+        }
+    }
+
+    fn time(&self) -> f64 {
+        (precise_time_ns() - self.start_time) as f64 * 1e-6
     }
 }
 
-impl<'a, E> FnOnce<&'a mut E, ActionMsg> for Action<E> {
-    type Output = f64; // time in ms
-    extern "rust-call" fn call_once(mut self, args: ()) -> f64 {
+impl<'a, A> FnOnce<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
+    type Output = (); // time in ms
+    extern "rust-call" fn call_once(mut self, args: (&'a mut A, ActionMsg)) {
         self.call_mut(args)
     }
 }
 
-impl<'a, E> FnMut<&'a mut E, ActionMsg> for Action<E> {
-    extern "rust-call" fn call_mut(&mut self, args: ()) -> f64 {
+impl<'a, A> FnMut<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
+    extern "rust-call" fn call_mut(&mut self, args: (&'a mut A, ActionMsg)) {
         self.call(args)
-        //(precise_time_ns() - self.start_time) as f64 * 1e-6
     }
 }
 
-impl<E> Fn<&mut E, ActionMsg> for Action<E> {
-    extern "rust-call" fn call(&self, _args: ()) -> f64 {
-        (precise_time_ns() - self.start_time) as f64 * 1e-6
+impl<'a, A> Fn<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
+    extern "rust-call" fn call(&self, _args: (&'a mut A, ActionMsg)) {
+        println!("{}", self.time());
     }
 }
 

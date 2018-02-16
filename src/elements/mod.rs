@@ -363,6 +363,25 @@ impl<T> Debug for Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
 
 
 
+pub enum Dim {
+    Absolute(i32),
+    Relative(f64),
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
