@@ -6,6 +6,4 @@ authors = ["shiMusa <fehsef@gmail.com>"]
 [dependencies]
 conrod = {git = "https://github.com/PistonDevelopers/conrod.git", features=["winit", "glium"]}
 time = "*"
-rhai = "0.8.1"
-dyon = "*"
 num = "*"

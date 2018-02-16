@@ -513,6 +513,26 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 use std::i32;
 
 pub trait Element {
@@ -750,7 +770,7 @@ impl BaseWindow {
                 }
             }
 
-            // check if msg have to be processed
+            // check if msgs have to be processed and transmit through chain
             if let &Some(ref receiver) = &self.receiver {
                 'receive: loop {
                     match receiver.try_recv() {

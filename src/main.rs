@@ -15,7 +15,6 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 fn main() {
 
-
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     base_window.add_receiver(base_receiver);
@@ -132,7 +131,11 @@ fn main() {
     ));
 
 
-    base_window.add_element(layers);
+    base_window.add_element(Pad::new(
+        layers,
+        PadAlignment::Center,
+        PadElementSize::AbsoluteNeg(25,25)
+    ));
 
     base_window.run(-1f64);
 }
