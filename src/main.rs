@@ -108,26 +108,6 @@ fn main() {
     list.push(inner_layer);
 
 
-    // A Link enables us to connect many wrappers around the same Element
-    // Here, it's just another Socket - for now.
-    // But in future, you'll be able to connect e.g. animations to
-    // the same element!
-    // For an Element to be part of a Link, it must also implement
-    // the "Linkable" trait.
-    let mut link =Link::new(
-        Button::new()
-            .with_label("linked button".to_string())
-            .with_color(conrod::color::LIGHT_BROWN)
-    );
-    link.push(Socket::new()
-        .with_action_receive(Box::new(|_button, msg| {
-            println!("linked button Socket {:?}", msg);
-        }))
-    );
-    list.push(link);
-
-
-
     layers.push(
         Socket::new().with_element(list)
             .with_action_receive(Box::new(|list, msg|{
