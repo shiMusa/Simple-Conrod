@@ -88,7 +88,7 @@ fn main() {
     );
 
     inner_layer.push(
-        Socket::new().with_element(
+        Socket::new(
             Label::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
@@ -109,7 +109,7 @@ fn main() {
 
 
     layers.push(
-        Socket::new().with_element(list)
+        Socket::new(list)
             .with_action_receive(Box::new(|list, msg|{
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
