@@ -24,6 +24,11 @@ Check back in future for more stuff :3
 
 Also: <b>There's much more already</b> than what's explained down below! Here you have an overview of the system:
 
+Blue: traits
+Green: container
+Yellow: concrete end-elements
+
+Follow the arrows and you can see what objects you can nest into each other!
 
 <img src="https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure_v2.svg" width="100%" height="400">
 
