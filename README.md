@@ -124,6 +124,3 @@ Plans:
 
 ![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/example_new.PNG)
 
-
- 
-
