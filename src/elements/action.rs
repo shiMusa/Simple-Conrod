@@ -1,8 +1,10 @@
 
-
 use conrod;
 
 use elements::*;
+
+
+use time::precise_time_ns;
 
 
 
@@ -20,6 +22,16 @@ const DEBUG: bool = false;
 
 
 
+/*
+ .d8b.   .o88b. d888888b d888888b  .d88b.  d8b   db .88b  d88. .d8888.  d888b
+d8' `8b d8P  Y8 `~~88~~'   `88'   .8P  Y8. 888o  88 88'YbdP`88 88'  YP 88' Y8b
+88ooo88 8P         88       88    88    88 88V8o 88 88  88  88 `8bo.   88
+88~~~88 8b         88       88    88    88 88 V8o88 88  88  88   `Y8b. 88  ooo
+88   88 Y8b  d8    88      .88.   `8b  d8' 88  V888 88  88  88 db   8D 88. ~8~
+YP   YP  `Y88P'    YP    Y888888P  `Y88P'  VP   V8P YP  YP  YP `8888Y'  Y888P
+
+
+*/
 
 
 
@@ -29,6 +41,7 @@ use std::sync::mpsc::{Sender};
 
 #[derive(Debug, Clone)]
 pub enum ActionMsgData {
+    Mouse(f64,f64),
     Click,
     Text(String),
     U8(u8),
@@ -41,12 +54,23 @@ pub enum ActionMsgData {
     F32(f32),
     Usize(usize),
     Exit,
+
+    Update,
+    None,
 }
 
 #[derive(Debug, Clone)]
 pub struct ActionMsg {
     pub sender_id: String,
     pub msg: ActionMsgData
+}
+impl ActionMsg {
+    pub fn empty() -> Self {
+        ActionMsg {
+            sender_id: "".to_string(),
+            msg: ActionMsgData::None
+        }
+    }
 }
 
 
@@ -64,67 +88,186 @@ pub trait ActionSendable {
 
 
 
-use std::cell::{RefCell};
-use std::rc::Rc;
 
-pub trait Linkable<E: Element> : Element {
-    fn set_element_link(&mut self, element: Rc<RefCell<Box<E>>>);
+
+
+
+
+
+
+
+
+
+
+
+/*
+ .d8b.  d8b   db d888888b .88b  d88.  .d8b.  d888888b d888888b  .d88b.  d8b   db
+d8' `8b 888o  88   `88'   88'YbdP`88 d8' `8b `~~88~~'   `88'   .8P  Y8. 888o  88
+88ooo88 88V8o 88    88    88  88  88 88ooo88    88       88    88    88 88V8o 88
+88~~~88 88 V8o88    88    88  88  88 88~~~88    88       88    88    88 88 V8o88
+88   88 88  V888   .88.   88  88  88 88   88    88      .88.   `8b  d8' 88  V888
+YP   YP VP   V8P Y888888P YP  YP  YP YP   YP    YP    Y888888P  `Y88P'  VP   V8P
+
+
+*/
+
+
+
+
+#[allow(unused_attributes)]
+pub trait Animateable : Element {
+    fn animate_size(&mut self, xy: (Dim,Dim)) {}
+    fn animate_position(&mut self, xy: (Dim,Dim)) {}
+    fn start(&mut self){}
+    fn run(&mut self){}
+    fn reset(&mut self);
 }
 
-pub struct Link<E: Element> {
-    is_setup: bool,
-    element: Rc<RefCell<Box<E>>>,
-    links: Vec<Box<Linkable<E>>>,
+
+
+pub trait SizeAnimation {
+    fn calc(&self, t: f64, duration: f64) -> (Dim, Dim);
 }
-impl<E> Link<E> where E: Element {
-    pub fn new(element: Box<E>) -> Box<Self> {
-        Box::new(Link{
-            is_setup: false,
-            element: Rc::new(RefCell::new(element)),
-            links: Vec::new()
+
+pub trait PositionAnimation {
+    fn calc(&self, t: f64, duration: f64) -> (Dim, Dim);
+}
+
+
+
+
+
+
+pub struct Animation {
+    pub element: Box<Animateable>,
+
+    size_animation: Option<Box<SizeAnimation>>,
+    position_animation: Option<Box<PositionAnimation>>,
+
+    duration: f64,
+    start_time: u64,
+    running: bool,
+}
+
+impl Animation {
+    pub fn new(element: Box<Animateable>) -> Box<Self> {
+        Box::new(Animation {
+            element,
+            size_animation: None,
+            position_animation: None,
+            duration: 100.0,
+            start_time: 0,
+            running: false
         })
     }
 
-    pub fn push(&mut self, mut linkable: Box<Linkable<E>>) {
-        linkable.set_element_link(self.element.clone());
-        self.links.push(linkable);
-    }
-}
-impl<E> Element for Link<E> where E: Element {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        (*self.element.borrow_mut()).setup(ui);;
-        self.is_setup = true;
-    }
-    fn is_setup(&self) -> bool {
-        self.is_setup && (*self.element.borrow()).is_setup()
+    pub fn with_duration(mut self, duration_ms: f64) -> Box<Self> {
+        self.duration = duration_ms;
+        Box::new(self)
     }
 
-    fn stop(&self) {
-        (*self.element.borrow_mut()).stop();
+    pub fn with_size_animation(mut self, animation: Box<SizeAnimation>) -> Box<Self> {
+        self.size_animation = Some(animation);
+        Box::new(self)
+    }
+
+    pub fn with_position_animation(mut self, animation: Box<PositionAnimation>) -> Box<Self> {
+        self.position_animation = Some(animation);
+        Box::new(self)
+    }
+
+    fn time(&self) -> f64 {
+        (precise_time_ns() - self.start_time) as f64 * 1e-6
+    }
+}
+
+
+impl Animateable for Animation {
+    fn animate_size(&mut self, xy: (Dim,Dim)) {
+        self.element.animate_size(xy);
+    }
+    fn animate_position(&mut self, xy: (Dim,Dim)) {
+        self.element.animate_position(xy);
+    }
+
+    fn start(&mut self) {
+        // start animation if not already running
+        if !self.running {
+            self.start_time = precise_time_ns();
+            self.running = true;
+        }
+        self.element.start();
+    }
+
+    fn run(&mut self) {
+        let mut do_reset = false;
+        let tau = self.duration;
+        let t = self.time();
+        let t = if self.running && t < self.duration {
+            t
+        } else {
+            self.running = false;
+            do_reset = true;
+            tau
+        };
+
+        if let Some(ref f) = self.size_animation {
+            self.element.animate_size(f.calc(t,tau));
+        }
+        if let Some(ref f) = self.position_animation {
+            self.element.animate_position(f.calc(t,tau));
+        }
+
+        if do_reset { self.element.reset() }
+    }
+
+    fn reset(&mut self) {
+        if !self.running {
+            self.element.reset();
+        }
+    }
+}
+
+
+impl Element for Animation {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.element.setup(ui);
+    }
+    fn is_setup(&self) -> bool {
+        self.element.is_setup()
+    }
+
+    fn stop(&mut self) {
+        self.element.stop();
+        self.running = false;
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        (*self.element.borrow_mut()).build_window(ui);
+        self.element.build_window(ui);
     }
 
     fn get_frame(&self) -> Frame<i32> {
-        (*self.element.borrow()).get_frame()
+        self.element.get_frame()
     }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        (*self.element.borrow_mut()).set_frame(frame, window_center);
+        self.element.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
-        (*self.element.borrow()).get_min_size()
+        self.element.get_min_size()
     }
     fn get_max_size(&self) -> Vec2<i32> {
-        (*self.element.borrow()).get_max_size()
+        self.element.get_max_size()
     }
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
-        for link in &mut self.links {
-            link.transmit_msg(msg.clone(), true);
+        match msg.msg {
+            ActionMsgData::Update => {
+                self.run();
+            },
+            _ => ()
         }
+
         if !stop {
-            (*self.element.borrow_mut()).transmit_msg(msg, false);
+            self.element.transmit_msg(msg, false);
         }
     }
 }
@@ -142,13 +285,6 @@ impl<E> Element for Link<E> where E: Element {
 
 
 
-pub struct Animation<E: Element> {
-    is_setup: bool,
-    element: Option<Box<E>>,
-    element_link: Option<Rc<RefCell<Box<E>>>>,
-
-
-}
 
 
 
@@ -166,20 +302,16 @@ pub struct Animation<E: Element> {
 
 
 
+/*
+.d8888.  .d88b.   .o88b. db   dD d88888b d888888b
+88'  YP .8P  Y8. d8P  Y8 88 ,8P' 88'     `~~88~~'
+`8bo.   88    88 8P      88,8P   88ooooo    88
+  `Y8b. 88    88 8b      88`8b   88~~~~~    88
+db   8D `8b  d8' Y8b  d8 88 `88. 88.        88
+`8888Y'  `Y88P'   `Y88P' YP   YD Y88888P    YP
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+*/
 
 
 
@@ -188,25 +320,17 @@ pub struct Animation<E: Element> {
 
 pub struct Socket<E: Element> {
     is_setup: bool,
-    element: Option<Box<E>>,
+    element: Box<E>,
     receive: Box<Fn(&mut E, ActionMsg)>,
-
-    element_link: Option<Rc<RefCell<Box<E>>>>,
 }
 impl<E> Socket<E> where E: Element {
 
-    pub fn new() -> Box<Self> {
+    pub fn new(element: Box<E>) -> Box<Self> {
         Box::new(Socket {
             is_setup: false,
-            element: None,
+            element,
             receive: Box::new(|_,_|{}),
-            element_link: None,
         })
-    }
-
-    pub fn with_element(mut self, element: Box<E>) -> Box<Self> {
-        self.element = Some(element);
-        Box::new(self)
     }
 
     pub fn with_action_receive(mut self, fun: Box<Fn(&mut E, ActionMsg)>) -> Box<Self> {
@@ -215,100 +339,40 @@ impl<E> Socket<E> where E: Element {
     }
 }
 
-impl<E> Linkable<E> for Socket<E> where E: Element {
-    fn set_element_link(&mut self, element: Rc<RefCell<Box<E>>>) {
-        self.element_link = Some(element);
-    }
-}
-
 impl<E> Element for Socket<E> where E: Element {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        if let Some(ref mut el) = self.element {
-            el.setup(ui);
-        }
-        if let Some(ref el) = self.element_link {
-            (*el.borrow_mut()).setup(ui);
-        }
+        self.element.setup(ui);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
-        let b0 = if let Some(ref el) = self.element {
-            el.is_setup()
-        } else { true };
-
-        let b1 = if let Some(ref el) = self.element_link {
-            (*el.borrow()).is_setup()
-        } else { true };
-
-        self.is_setup && b0 && b1
+        self.is_setup && self.element.is_setup()
     }
 
-    fn stop(&self) {
-        if let Some(ref el) = self.element {
-            el.stop();
-        }
-        if let Some(ref el) = self.element_link {
-            (*el.borrow()).stop();
-        }
+    fn stop(&mut self) {
+        self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
-        if let Some(ref el) = self.element {
-            el.build_window(ui);
-        }
-        if let Some(ref el) = self.element_link {
-            (*el.borrow()).build_window(ui);
-        }
+        self.element.build_window(ui);
     }
 
     fn get_frame(&self) -> Frame<i32> {
-        if let Some(ref el) = self.element {
-            return el.get_frame();
-        }
-        if let Some(ref el) = self.element_link {
-            return (*el.borrow()).get_frame();
-        }
-        Frame::new()
+        self.element.get_frame()
     }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
-        if let Some(ref mut el) = self.element {
-            el.set_frame(frame, window_center);
-        }
-        if let Some(ref el) = self.element_link {
-            (*el.borrow_mut()).set_frame(frame, window_center);
-        }
+        self.element.set_frame(frame, window_center);
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
-        if let Some(ref el) = self.element {
-            return el.get_min_size();
-        }
-        if let Some(ref el) = self.element_link {
-            return (*el.borrow()).get_min_size();
-        }
-        Vec2::zero()
+        self.element.get_min_size()
     }
     fn get_max_size(&self) -> Vec2<i32> {
-        if let Some(ref el) = self.element {
-            return el.get_max_size();
-        }
-        if let Some(ref el) = self.element_link {
-            return (*el.borrow()).get_max_size();
-        }
-        Vec2 {
-            x: i32::MAX, y: i32::MAX
-        }
+        self.element.get_max_size()
     }
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
         // first socket, then content
-        if let Some(ref mut el) = self.element {
-            (self.receive)(el, msg.clone());
-            if !stop { el.transmit_msg(msg.clone(), false); }
-        }
-        if let Some(ref el) = self.element_link {
-            (self.receive)(&mut *el.borrow_mut(), msg.clone());
-            if !stop { (&mut *el.borrow_mut()).transmit_msg(msg, false); }
+        (self.receive)(&mut self.element, msg.clone());
+        if !stop {
+            self.element.transmit_msg(msg, false);
         }
     }
 }
-
-

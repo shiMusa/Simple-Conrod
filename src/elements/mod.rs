@@ -11,7 +11,7 @@ use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{self, Sender, Receiver};
 
 
 
@@ -37,6 +37,16 @@ use elements::action::*;
 
 
 
+/*
+d8888b. d888888b d8b   db  d888b  d88888b db      d88888b .88b  d88. d88888b d8b   db d888888b
+88  `8D   `88'   888o  88 88' Y8b 88'     88      88'     88'YbdP`88 88'     888o  88 `~~88~~'
+88oobY'    88    88V8o 88 88      88ooooo 88      88ooooo 88  88  88 88ooooo 88V8o 88    88
+88`8b      88    88 V8o88 88  ooo 88~~~~~ 88      88~~~~~ 88  88  88 88~~~~~ 88 V8o88    88
+88 `88.   .88.   88  V888 88. ~8~ 88.     88booo. 88.     88  88  88 88.     88  V888    88
+88   YD Y888888P VP   V8P  Y888P  Y88888P Y88888P Y88888P YP  YP  YP Y88888P VP   V8P    YP
+
+
+*/
 
 
 
@@ -152,6 +162,16 @@ impl<T> RingElement<T> where T: Num + NumCast + PartialOrd + Copy + Debug{
 
 
 
+/*
+d8888b. d888888b d8b   db  d888b
+88  `8D   `88'   888o  88 88' Y8b
+88oobY'    88    88V8o 88 88
+88`8b      88    88 V8o88 88  ooo
+88 `88.   .88.   88  V888 88. ~8~
+88   YD Y888888P VP   V8P  Y888P
+
+
+*/
 
 
 
@@ -359,6 +379,24 @@ impl<T> Debug for Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
 
 
 
+/*
+d8888b. d888888b .88b  d88.
+88  `8D   `88'   88'YbdP`88
+88   88    88    88  88  88
+88   88    88    88  88  88
+88  .8D   .88.   88  88  88
+Y8888D' Y888888P YP  YP  YP
+
+
+*/
+
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum Dim {
+    Absolute(i32),
+    Relative(f64),
+}
 
 
 
@@ -369,6 +407,27 @@ impl<T> Debug for Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+/*
+db    db d88888b  .o88b. .d888b.
+88    88 88'     d8P  Y8 VP  `8D
+Y8    8P 88ooooo 8P         odD'
+`8b  d8' 88~~~~~ 8b       .88'
+ `8bd8'  88.     Y8b  d8 j88.
+   YP    Y88888P  `Y88P' 888888D
+
+
+*/
 
 
 
@@ -452,6 +511,16 @@ impl<T> Mul<T> for Vec2<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
+/*
+d88888b d8888b.  .d8b.  .88b  d88. d88888b
+88'     88  `8D d8' `8b 88'YbdP`88 88'
+88ooo   88oobY' 88ooo88 88  88  88 88ooooo
+88~~~   88`8b   88~~~88 88  88  88 88~~~~~
+88      88 `88. 88   88 88  88  88 88.
+YP      88   YD YP   YP YP  YP  YP Y88888P
+
+
+*/
 
 
 
@@ -529,6 +598,16 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
+/*
+                   d888888b d8888b.  .d8b.  d888888b d888888b .d8888.
+                   `~~88~~' 88  `8D d8' `8b   `88'   `~~88~~' 88'  YP
+                      88    88oobY' 88ooo88    88       88    `8bo.
+C8888D C8888D         88    88`8b   88~~~88    88       88      `Y8b.      C8888D C8888D
+                      88    88 `88. 88   88   .88.      88    db   8D
+                      YP    88   YD YP   YP Y888888P    YP    `8888Y'
+
+
+*/
 
 
 
@@ -539,7 +618,7 @@ pub trait Element {
     fn setup(&mut self, ui: &mut conrod::Ui);
     fn is_setup(&self) -> bool;
 
-    fn stop(&self) {}
+    fn stop(&mut self) {}
     fn build_window(&self, ui: &mut conrod::UiCell);
 
     fn get_frame(&self) -> Frame<i32>;
@@ -603,11 +682,21 @@ pub trait Backgroundable {
 
 
 
+/*
+db   d8b   db d888888b d8b   db d8888b.  .d88b.  db   d8b   db
+88   I8I   88   `88'   888o  88 88  `8D .8P  Y8. 88   I8I   88
+88   I8I   88    88    88V8o 88 88   88 88    88 88   I8I   88
+Y8   I8I   88    88    88 V8o88 88   88 88    88 Y8   I8I   88
+`8b d8'8b d8'   .88.   88  V888 88  .8D `8b  d8' `8b d8'8b d8'
+ `8b8' `8d8'  Y888888P VP   V8P Y8888D'  `Y88P'   `8b8' `8d8'
+
+
+*/
 
 
 
 
-pub struct BaseWindow {
+pub struct Window {
     events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     renderer: conrod::backend::glium::Renderer,
@@ -615,11 +704,13 @@ pub struct BaseWindow {
     ui: conrod::Ui,
 
     element: Option<Box<Element>>,
-    receiver: Option<Receiver<ActionMsg>>,
+    receivers: Vec<Receiver<ActionMsg>>,
     senders: Vec<Sender<ActionMsg>>,
+
+    selfsender: Sender<ActionMsg>,
 }
 
-impl BaseWindow {
+impl Window {
 
     fn setup(&mut self) {
         if let Some(ref mut el) = self.element {
@@ -633,7 +724,7 @@ impl BaseWindow {
     }
 
     pub fn add_receiver(&mut self, receiver: Receiver<ActionMsg>) {
-        self.receiver = Some(receiver);
+        self.receivers.push(receiver);
     }
 
     pub fn add_sender(&mut self, sender: Sender<ActionMsg>) {
@@ -674,20 +765,28 @@ impl BaseWindow {
         // image mapping, here: none
         let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
+        let (selfsender, selfreceiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
+            = mpsc::channel();
 
-        BaseWindow {
+
+        Window {
             events_loop,
             display,
             renderer,
             image_map,
             ui,
             element: None,
-            receiver: None,
+            receivers: vec![selfreceiver],
             senders: Vec::new(),
+            selfsender
         }
     }
 
-    pub fn run(&mut self, fps: f64) {
+    pub fn run(&mut self) {
+        self.run_with_fps(-1f64);
+    }
+
+    pub fn run_with_fps(&mut self, fps: f64) {
 
         self.setup();
 
@@ -710,6 +809,7 @@ impl BaseWindow {
 
 
             let mut update = false;
+            let mut resized = false;
 
             // process events
             for event in events.drain(..) {
@@ -719,6 +819,23 @@ impl BaseWindow {
                 match event.clone() {
                     Event::WindowEvent { event, .. } => {
                         match event {
+                            WindowEvent::CursorMoved {
+                                position: (x,y),
+                                ..
+                            } => {
+                                //println!("mouse moved {}, {}",x,y);
+                                for sender in &mut self.senders {
+                                    let _ = sender.send(ActionMsg{
+                                        sender_id: "window".to_string(),
+                                        msg: ActionMsgData::Mouse(x,y)
+                                    });
+                                }
+
+                                let _ = self.selfsender.send(ActionMsg{
+                                    sender_id: "window".to_string(),
+                                    msg: ActionMsgData::Mouse(x,y)
+                                });
+                            },
                             WindowEvent::Closed |
                             WindowEvent::KeyboardInput {
                                 input: KeyboardInput{
@@ -726,7 +843,18 @@ impl BaseWindow {
                                     ..
                                 },
                                 ..
-                            } => break 'render,
+                            } => {
+                                for sender in &mut self.senders {
+                                    let _ = sender.send(ActionMsg{
+                                        sender_id: "window".to_string(),
+                                        msg: ActionMsgData::Exit
+                                    });
+                                }
+                                use std::thread;
+                                use std::time::Duration;
+                                thread::sleep(Duration::from_millis(1000));
+                                break 'render
+                            },
                             WindowEvent::Resized(mut w, mut h) => {
 
                                 // TODO is this limit necessary?
@@ -740,6 +868,7 @@ impl BaseWindow {
                                     if h < min.y as u32 { h = min.y as u32; }
 
                                     window_frame = Frame::new_with_size(w as i32,h as i32);
+                                    resized = true;
                                 }
                             }
                             _ => (),
@@ -771,7 +900,7 @@ impl BaseWindow {
             }
 
             // check if msgs have to be processed and transmit through chain
-            if let &Some(ref receiver) = &self.receiver {
+            for receiver in &self.receivers {
                 'receive: loop {
                     match receiver.try_recv() {
                         Ok(msg) => {
@@ -783,22 +912,33 @@ impl BaseWindow {
                             for sender in &mut self.senders {
                                 let _ = sender.send(msg.clone());
                             }
+
+                            match msg.msg {
+                                ActionMsgData::Update => self.ui.needs_redraw(),
+                                _ => ()
+                            }
                         },
                         _ => break 'receive
                     }
                 }
             }
 
-            if update {
-                if let Some(ref mut el) = self.element {
-                    if !el.is_setup() {
-                        el.setup(&mut self.ui);
-                    }
+            if let Some(ref mut el) = self.element {
+                if !el.is_setup() {
+                    el.setup(&mut self.ui);
                 }
+            }
 
-                let ui = &mut self.ui.set_widgets();
+            if resized {
                 if let Some(ref mut el) = self.element {
                     el.set_frame(window_frame, window_frame.center());
+                }
+            }
+
+            if update {
+                let ui = &mut self.ui.set_widgets();
+                if let Some(ref mut el) = self.element {
+                    //el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui);
                 }
             }
@@ -813,7 +953,7 @@ impl BaseWindow {
             }
         }
 
-        if let Some(ref el) = self.element {
+        if let Some(ref mut el) = self.element {
             el.stop();
         }
     }

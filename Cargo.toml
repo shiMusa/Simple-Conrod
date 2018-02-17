@@ -7,3 +7,11 @@ authors = ["shiMusa <fehsef@gmail.com>"]
 conrod = {git = "https://github.com/PistonDevelopers/conrod.git", features=["winit", "glium"]}
 time = "*"
 num = "*"
+
+[lib]
+name = "sabi"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sabi"
+path = "src/bin.rs"

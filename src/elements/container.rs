@@ -1,8 +1,6 @@
 
 
 
-use conrod;
-
 use elements::{*, action::*};
 
 
@@ -35,6 +33,16 @@ const DEBUG: bool = false;
 
 
 
+/*
+d88888b .88b  d88. d8888b. d888888b db    db
+88'     88'YbdP`88 88  `8D `~~88~~' `8b  d8'
+88ooooo 88  88  88 88oodD'    88     `8bd8'
+88~~~~~ 88  88  88 88~~~      88       88
+88.     88  88  88 88         88       88
+Y88888P YP  YP  YP 88         YP       YP
+
+
+*/
 
 
 
@@ -82,6 +90,16 @@ impl Element for Empty {
 
 
 
+/*
+db       .d8b.  db    db d88888b d8888b. .d8888.
+88      d8' `8b `8b  d8' 88'     88  `8D 88'  YP
+88      88ooo88  `8bd8'  88ooooo 88oobY' `8bo.
+88      88~~~88    88    88~~~~~ 88`8b     `Y8b.
+88booo. 88   88    88    88.     88 `88. db   8D
+Y88888P YP   YP    YP    Y88888P 88   YD `8888Y'
+
+
+*/
 
 
 
@@ -134,8 +152,8 @@ impl Element for Layers {
         setup
     }
 
-    fn stop(&self) {
-        for el in &self.layers {
+    fn stop(&mut self) {
+        for el in &mut self.layers {
             el.stop();
         }
     }
@@ -202,6 +220,16 @@ impl Element for Layers {
 
 
 
+/*
+db      d888888b .d8888. d888888b
+88        `88'   88'  YP `~~88~~'
+88         88    `8bo.      88
+88         88      `Y8b.    88
+88booo.   .88.   db   8D    88
+Y88888P Y888888P `8888Y'    YP
+
+
+*/
 
 
 
@@ -316,8 +344,8 @@ impl Element for List {
         setup
     }
 
-    fn stop(&self) {
-        for el in &self.elements {
+    fn stop(&mut self) {
+        for el in &mut self.elements {
             el.stop();
         }
     }
@@ -409,14 +437,22 @@ impl Element for List {
 
 
 
+/*
+d8888b.  .d8b.  d8888b.
+88  `8D d8' `8b 88  `8D
+88oodD' 88ooo88 88   88
+88~~~   88~~~88 88   88
+88      88   88 88  .8D
+88      YP   YP Y8888D'
+
+
+*/
 
 
 
 pub enum PadElementSize {
-    Absolute(i32, i32),
-    Relative(f64, f64),
-    AbsoluteNeg(i32, i32),
-    RelativeNeg(f64, f64),
+    Positive(Dim, Dim),
+    Negative(Dim, Dim),
 }
 
 pub enum PadAlignment {
@@ -447,6 +483,8 @@ pub struct Pad {
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
+    original_frame: Frame<i32>,
+
     ids: Option<PadIds>,
     background: Background,
 }
@@ -461,62 +499,18 @@ impl Pad {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
+            original_frame: Frame::new(),
             ids: None,
             background: Background::None,
         })
     }
-}
 
-impl Backgroundable for Pad {
-    fn with_background(mut self, bg: Background) -> Box<Self> {
-        self.background = bg;
-        Box::new(self)
-    }
-    fn set_background(&mut self, bg: Background) {
-        self.background = bg;
-    }
-}
 
-impl Element for Pad {
-    fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.ids = Some(PadIds::new(ui.widget_id_generator()));
-        if !self.element.is_setup() { self.element.setup(ui); }
-        self.is_setup = true;
-    }
-    fn is_setup(&self) -> bool {
-        self.is_setup && self.element.is_setup()
+    fn update_original_frame(&mut self) {
+        self.original_frame = self.frame;
     }
 
-    fn stop(&self) {
-        self.element.stop();
-    }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        use conrod::{Widget, Positionable};
-
-        if let Some(ref ids) = self.ids {
-
-            let center = self.frame.center() - self.global_center;
-
-            match self.background {
-                Background::None => (),
-                Background::Color(color) => {
-                    let mut rect = conrod::widget::Rectangle::fill_with(
-                        [self.frame.width() as f64, self.frame.height() as f64],
-                        color
-                    ).x_y(center.x as f64, center.y as f64);
-                    rect.set(ids.background, ui);
-                }
-            }
-            self.element.build_window(ui);
-        }
-    }
-
-    fn get_frame(&self) -> Frame<i32> {
-        self.frame
-    }
-
-    #[allow(unreachable_patterns)]
-    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+    fn rescale(&mut self, frame: Frame<i32>, window_center: Vec2<i32>, limit: bool) {
         self.global_center = window_center;
         self.frame = frame;
         use self::PadAlignment::*;
@@ -524,30 +518,37 @@ impl Element for Pad {
         let min = self.element.get_min_size();
 
         // map relative values to absolute pixel
-        let s = {
-            let tmp = self.frame.size();
-            Vec2{ x: tmp.x as f64, y: tmp.y as f64}
-        };
+        let s = self.frame.size();
 
         let mut v = match self.pad_size {
-            PadElementSize::Absolute(x,y) => Vec2{x,y},
-            PadElementSize::Relative(x,y) => {
-                let v = Vec2{x,y};
-                let v2 =v.el_mul(s);
-                Vec2{ x: v2.x as i32, y: v2.y as i32 }
+            PadElementSize::Positive(ref x, ref y) => {
+                let xx = match x {
+                    &Dim::Absolute(ix) => ix,
+                    &Dim::Relative(fx) => (s.x as f64 * fx) as i32
+                };
+                let yy = match y {
+                    &Dim::Absolute(iy) => iy,
+                    &Dim::Relative(fy) => (s.y as f64 * fy) as i32
+                };
+                Vec2{x: xx, y: yy}
             },
-            PadElementSize::AbsoluteNeg(x, y) => {
-                let s = self.frame.size();
-                Vec2{x: s.x - x, y: s.y - y}
-            },
-            PadElementSize::RelativeNeg(x, y) => {
-                let v = Vec2{x,y};
-                let v2 = s - v.el_mul(s);
-                Vec2{x: v2.x as i32, y: v2.y as i32}
+            PadElementSize::Negative(ref x, ref y) => {
+                let xx = match x {
+                    &Dim::Absolute(ix) => s.x - ix,
+                    &Dim::Relative(fx) => (s.x as f64 * (1.0 - fx)) as i32
+                };
+                let yy = match y {
+                    &Dim::Absolute(iy) => s.y - iy,
+                    &Dim::Relative(fy) => (s.y as f64 * (1.0 - fy)) as i32
+                };
+                Vec2{x: xx, y: yy}
             }
         };
-        if v.x < min.x { v.x = min.x; }
-        if v.y < min.y { v.y = min.y; }
+
+        if limit {
+            if v.x < min.x { v.x = min.x; }
+            if v.y < min.y { v.y = min.y; }
+        }
 
         let center = self.frame.center();
 
@@ -609,11 +610,124 @@ impl Element for Pad {
                     p0: Vec2{x: self.frame.p0.x, y: midy - v.y/2},
                     p1: Vec2{x: self.frame.p0.x + v.x, y: midy + v.y/2}
                 }
-            },
-            _ => self.frame
+            }
         };
 
         self.element.set_frame(frame, window_center);
+    }
+}
+
+
+impl Animateable for Pad {
+    fn animate_size(&mut self, xy: (Dim,Dim)) {
+        let (x,y) = xy;
+
+        let c = self.frame.center();
+        let w = self.original_frame.width();
+        let h = self.original_frame.height();
+
+        let nx = match x {
+            Dim::Absolute(ix) => w/2 + ix,
+            Dim::Relative(fx) => (w as f64 / 2.0 * fx) as i32
+        };
+        let ny = match y {
+            Dim::Absolute(iy) => h/2 + iy,
+            Dim::Relative(fy) => (h as f64 / 2.0 * fy) as i32
+        };
+
+        let frame = Frame {
+            p0: Vec2{ x: c.x-nx, y: c.y-ny},
+            p1: Vec2{ x: c.x+nx, y: c.y+ny}
+        };
+        let center = self.global_center;
+        self.rescale(frame, center, false);
+    }
+
+    fn animate_position(&mut self, xy: (Dim, Dim)) {
+        let (x,y) = xy;
+
+        let oc = self.original_frame.center();
+        let ow = self.original_frame.width();
+        let oh = self.original_frame.height();
+        let w = self.frame.width();
+        let h = self.frame.height();
+
+        let nx = match x {
+            Dim::Absolute(ix) => ix,
+            Dim::Relative(fx) => (ow as f64 / 2.0 * fx) as i32
+        };
+        let ny = match y {
+            Dim::Absolute(iy) => iy,
+            Dim::Relative(fy) => (oh as f64 / 2.0 * fy) as i32
+        };
+
+        let frame = Frame {
+            p0: oc + Vec2{x: - w/2 + nx, y: -h/2 + ny},
+            p1: oc + Vec2{x:   w/2 + nx, y:  h/2 + ny},
+        };
+        let center = self.global_center;
+        self.rescale(frame, center, false);
+    }
+
+    fn reset(&mut self) {
+        let center = self.global_center;
+        let frame = self.original_frame;
+        self.rescale(frame, center, true);
+    }
+}
+
+
+impl Backgroundable for Pad {
+    fn with_background(mut self, bg: Background) -> Box<Self> {
+        self.background = bg;
+        Box::new(self)
+    }
+    fn set_background(&mut self, bg: Background) {
+        self.background = bg;
+    }
+}
+
+impl Element for Pad {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.ids = Some(PadIds::new(ui.widget_id_generator()));
+        if !self.element.is_setup() { self.element.setup(ui); }
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        self.is_setup && self.element.is_setup()
+    }
+
+    fn stop(&mut self) {
+        self.element.stop();
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell) {
+        use conrod::{Widget, Positionable};
+
+        if let Some(ref ids) = self.ids {
+
+            let center = self.frame.center() - self.global_center;
+
+            match self.background {
+                Background::None => (),
+                Background::Color(color) => {
+                    let mut rect = conrod::widget::Rectangle::fill_with(
+                        [self.frame.width() as f64, self.frame.height() as f64],
+                        color
+                    ).x_y(center.x as f64, center.y as f64);
+                    rect.set(ids.background, ui);
+                }
+            }
+            self.element.build_window(ui);
+        }
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.rescale(frame, window_center, true);
+        self.update_original_frame();
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -631,6 +745,3 @@ impl Element for Pad {
         if !stop { self.element.transmit_msg(msg, false); }
     }
 }
-
-
-

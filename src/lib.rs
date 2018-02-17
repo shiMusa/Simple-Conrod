@@ -1,4 +1,7 @@
+
 #![feature(duration_extras)]
+#![feature(unboxed_closures)]
+#![feature(fn_traits)]
 
 pub mod elements;
 
@@ -6,21 +9,107 @@ pub mod elements;
 extern crate time;
 extern crate num;
 
+
 use elements::{*, container::*, basic::*, action::*};
-
-
 use std::sync::mpsc::{self, Sender, Receiver};
 
 
 
-fn main() {
 
-    let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
+
+
+
+/*
+d888888b d888888b .88b  d88. d88888b d8888b.
+`~~88~~'   `88'   88'YbdP`88 88'     88  `8D
+   88       88    88  88  88 88ooooo 88oobY'
+   88       88    88  88  88 88~~~~~ 88`8b
+   88      .88.   88  88  88 88.     88 `88.
+   YP    Y888888P YP  YP  YP Y88888P 88   YD
+
+
+*/
+
+
+
+use std::thread;
+
+pub struct Timer {
+    handle: thread::JoinHandle<()>,
+}
+impl Timer {
+    pub fn new(sender: Sender<ActionMsg>, receiver: Receiver<ActionMsg>, fps: f64) -> Self {
+        use std::thread;
+        use std::time::Duration;
+
+        let dur = Duration::from_millis((1000.0/fps) as u64);
+
+        let handle = thread::spawn(move ||{
+            'run: loop {
+                'receive: loop {
+                    match receiver.try_recv() {
+                        Ok(msg) => {
+                            //println!("Timer: message received: {:?}", msg);
+
+                            match msg.msg {
+                                ActionMsgData::Exit => break 'run,
+                                _ => ()
+                            }
+
+                        },
+                        _ => break 'receive
+                    }
+                }
+                let _ = sender.send(ActionMsg{
+                    sender_id: "timer".to_string(),
+                    msg: ActionMsgData::Update,
+                });
+                thread::sleep(dur);
+            }
+        });
+        Timer{
+            handle
+        }
+    }
+
+    pub fn stop(self) {
+        let _ = self.handle.join();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+/*
+d88888b db    db  .d8b.  .88b  d88. d8888b. db      d88888b
+88'     `8b  d8' d8' `8b 88'YbdP`88 88  `8D 88      88'
+88ooooo  `8bd8'  88ooo88 88  88  88 88oodD' 88      88ooooo
+88~~~~~  .dPYb.  88~~~88 88  88  88 88~~~   88      88~~~~~
+88.     .8P  Y8. 88   88 88  88  88 88      88booo. 88.
+Y88888P YP    YP YP   YP YP  YP  YP 88      Y88888P Y88888P
+
+
+*/
+
+
+
+
+
+pub fn example() {
+
+    let mut window = Window::new("Container".to_string(), 800, 800);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-    base_window.add_receiver(base_receiver);
+    window.add_receiver(base_receiver);
 
     let mut layers = Layers::new();
-    
+
     let mut list = List::new(ListAlignment::Vertical);
 
     let mut sublist = List::new(ListAlignment::Horizontal);
@@ -49,7 +138,7 @@ fn main() {
                 .with_id("Hey".to_string())
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
-            PadElementSize::Relative(0.5, 0.5)
+            PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.5))
         ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
     );
     sublist.push(
@@ -71,7 +160,7 @@ fn main() {
                     println!("List -> Button");
                 })),
             PadAlignment::Center,
-            PadElementSize::AbsoluteNeg(20,20)
+            PadElementSize::Negative(Dim::Absolute(20),Dim::Absolute(20))
         )
     );
 
@@ -83,12 +172,12 @@ fn main() {
                 println!("List -> Pad -> Button with const size");
             })),
         PadAlignment::TopLeft,
-        PadElementSize::Absolute(200, 200) )
+        PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
         .with_background(Background::Color(conrod::color::LIGHT_BLUE))
     );
 
     inner_layer.push(
-        Socket::new().with_element(
+        Socket::new(
             Label::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
@@ -109,8 +198,8 @@ fn main() {
 
 
     layers.push(
-        Socket::new().with_element(list)
-            .with_action_receive(Box::new(|list, msg|{
+        Socket::new(list)
+            .with_action_receive(Box::new(|list: &mut List, msg: ActionMsg|{
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
                         let _ = list.pop();
@@ -135,15 +224,15 @@ fn main() {
             .with_id("Action".to_string())
             .with_sender(base_sender),
         PadAlignment::Center,
-        PadElementSize::Relative(0.5, 0.4)
+        PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.4))
     ));
 
 
-    base_window.add_element(Pad::new(
+    window.add_element(Pad::new(
         layers,
         PadAlignment::Center,
-        PadElementSize::AbsoluteNeg(25,25)
+        PadElementSize::Negative(Dim::Absolute(25),Dim::Absolute(25))
     ));
 
-    base_window.run(-1f64);
+    window.run();
 }
