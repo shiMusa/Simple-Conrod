@@ -205,16 +205,16 @@ impl<'a, A> FnMut<(&'a mut Box<A>,)> for Animation where A: Animateable {
 
 
 
-pub struct MultiSocket<E: Animateable> {
+pub struct AnimationSocket<E: Animateable> {
     is_setup: bool,
     pub element: Box<E>,
 
     functions: Vec<(ActionMsg, Box<Animation>)>,
 }
 
-impl<E> MultiSocket<E> where E: Animateable {
+impl<E> AnimationSocket<E> where E: Animateable {
     pub fn new(element: Box<E>) -> Box<Self> {
-        Box::new(MultiSocket {
+        Box::new(AnimationSocket {
             is_setup: false,
             element,
             functions: Vec::new()
@@ -232,7 +232,7 @@ impl<E> MultiSocket<E> where E: Animateable {
 }
 
 
-impl<E> Element for MultiSocket<E> where E: Animateable {
+impl<E> Element for AnimationSocket<E> where E: Animateable {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.element.setup(ui);
         self.is_setup = true;

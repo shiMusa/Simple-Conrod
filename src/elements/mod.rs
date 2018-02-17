@@ -749,7 +749,7 @@ impl BaseWindow {
                                 position: (x,y),
                                 ..
                             } => {
-                                println!("mouse moved {}, {}",x,y);
+                                //println!("mouse moved {}, {}",x,y);
                                 for sender in &mut self.senders {
                                     let _ = sender.send(ActionMsg{
                                         sender_id: "window".to_string(),

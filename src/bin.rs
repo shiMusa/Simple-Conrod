@@ -39,7 +39,7 @@ fn main() {
         })));
 
 
-    let multi_socket = MultiSocket::new(button)
+    let animation_socket = AnimationSocket::new(button)
         .with_action_receive(ActionMsg{
             sender_id: "testbutton".to_string(),
             msg: ActionMsgData::Click
@@ -49,6 +49,6 @@ fn main() {
     let mut window = BaseWindow::new("Animation Test".to_string(), 800,800);
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
-    window.add_element(multi_socket);
+    window.add_element(animation_socket);
     window.run(120f64);
 }
