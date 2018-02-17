@@ -1,4 +1,5 @@
 # Simple-Conrod
+
 A simple, user-friendly and multi-threading enabled gui-framework in <b>Rust</b> based on <b>Conrod</b>
 Example can be found in main() function.
 <b>heavy WIP!</b>
@@ -11,7 +12,8 @@ Already implemented:
    - Pad (for padding an element and positioning inside a cell)
    - Layers (for layering elements on top of each other, like in a graphics application)
    - Empty
- - Socket (for receiving Actions/Events)
+   - Socket (for receiving Actions/Events)
+ - Animation (like a Container)
 
 # Preamble
 
@@ -31,13 +33,13 @@ let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
 ```
 
 All elements implement the trait Element so that they can be arbitrarily nested.
-There are <i>container</i> elements to help organize the layout, e.g. a list with
+There are <i>container</i> elements to help organize the layout, e.g. a ```List``` with
 a vertical arrangement of elements:
 ```rust
 let mut list = List::new(ListAlignment::Vertical);
 ```
 
-At the end of the chain we want a element to display or interact with - like a <i>Button</i>.
+At the end of the chain we want a element to display or interact with - like a ```Button```.
 Let's add a Button with a Text on it immediately to the list
 ```rust
 list.push(
@@ -48,12 +50,11 @@ list.push(
 In the end, we want to add the list to the window and let the window run:
 ```rust
 base_window.add_element(list);
-base_window.run(-1f64);
+base_window.run();
 ```
-A negative number indicates that the window is only redrawn, if there is a state change somewhere 
-(like clicking a Button or resizing the window).
-A positive number corresponds to the fps the window is forced to redraw. This is helpful if you
-want to update dynamic content (real-time data, games ;)
+
+In case you want to force redraws of the window, you can use ```window.run_with_fps(fps: f64)``` or a ```Timer```, which will send ```Update``` messages at a given fps rate.
+
 
 # Actions (Events)
 
@@ -83,7 +84,7 @@ On the receiver side, the window accepts a receiver
 base_window.add_receiver(receiver);
 ```
 which will transmit the messages down the chain of Elements.
-For an Element to receive a message, we need to wrap it in an <i>Socket</i>
+For an Element to receive a message, we need to wrap it in an ```Socket``` 
 ```rust
 let socket = Socket::new(some_element /*Button, Label, List...*/)
     .with_action_receive(Box::new(|element, msg|{
@@ -94,7 +95,7 @@ let socket = Socket::new(some_element /*Button, Label, List...*/)
 }));
 ```
 
-It is here, where you can now think of adding/removing elements during runtime. If e.g. in the above example "element" is a <i>List</i>, then you can just ```push(...)``` or ```insert(...)``` new elements or ```pop()``` and ```remove(...)``` elements.
+It is here, where you can now think of adding/removing elements during runtime. If e.g. in the above example ```element``` is a ```List```, then you can just ```push(...)``` or ```insert(...)``` new elements or ```pop()``` and ```remove(...)``` elements.
 
 <i>In very near future, you'll be able to add an arbitrary number of receivers to any Socket.</i>
 
