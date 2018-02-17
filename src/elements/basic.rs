@@ -235,6 +235,8 @@ impl Animateable for Button {
     fn animate_position(&mut self, x: Dim, y: Dim) {
 
     }
+
+    fn reset(&mut self) {}
 }
 
 

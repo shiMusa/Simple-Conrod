@@ -1,5 +1,4 @@
 
-
 use conrod;
 
 use elements::*;
@@ -29,6 +28,7 @@ use std::sync::mpsc::{Sender};
 
 #[derive(Debug, Clone)]
 pub enum ActionMsgData {
+    Mouse(f64,f64),
     Click,
     Text(String),
     U8(u8),
@@ -42,6 +42,7 @@ pub enum ActionMsgData {
     Usize(usize),
     Exit,
 
+    Update,
     None,
 }
 
@@ -99,13 +100,15 @@ pub trait Animateable : Element {
 
     fn animate_size(&mut self, x: Dim, y: Dim);
     fn animate_position(&mut self, x: Dim, y: Dim);
+
+    fn reset(&mut self);
 }
 
 
 pub enum AnimationFunction {
     Size(Box<Fn(f64) -> (Dim,Dim)>),
     Position(Box<Fn(f64) -> (Dim,Dim)>),
-    None
+    No
 }
 
 
@@ -120,15 +123,30 @@ pub enum AnimationFunction {
 
 pub struct Animation {
     start_time: u64,
-    function: AnimationFunction
+    functions: Vec<AnimationFunction>,
+
+    running: bool,
+    duration: f64,
 }
 
 impl Animation {
-    pub fn new() -> Self {
+    pub fn new(duration: f64) -> Self {
         Animation {
-            start_time: precise_time_ns(),
-            function: AnimationFunction::None
+            start_time: 0,
+            functions: Vec::new(),
+
+            running: false,
+            duration,
         }
+    }
+
+    pub fn with_function(mut self, function: AnimationFunction) -> Animation {
+        self.functions.push(function);
+        self
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.running
     }
 
     fn time(&self) -> f64 {
@@ -136,24 +154,46 @@ impl Animation {
     }
 }
 
-impl<'a, A> FnOnce<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
+impl<'a, A> FnOnce<(&'a mut Box<A>,)> for Animation where A: Animateable {
     type Output = (); // time in ms
-    extern "rust-call" fn call_once(mut self, args: (&'a mut A, ActionMsg)) {
+    extern "rust-call" fn call_once(mut self, args: (&'a mut Box<A>,)) {
         self.call_mut(args)
     }
 }
 
-impl<'a, A> FnMut<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
-    extern "rust-call" fn call_mut(&mut self, args: (&'a mut A, ActionMsg)) {
-        self.call(args)
+impl<'a, A> FnMut<(&'a mut Box<A>,)> for Animation where A: Animateable {
+    extern "rust-call" fn call_mut(&mut self, args: (&'a mut Box<A>,)) {
+
+        // start animation if not already running
+        if !self.running {
+            self.start_time = precise_time_ns();
+            self.running = true;
+        }
+
+        // stop animation when duration reached
+        if self.time() > self.duration {
+            self.running = false;
+            (args.0).reset();
+        }
+
+        // if running: animate
+        if self.running {
+            let anim = args.0;
+
+            let t = self.time();
+            for fun in &self.functions {
+                match fun {
+                    &AnimationFunction::Size(ref size_fun) => {
+                        let (x,y) = size_fun(t);
+                        anim.animate_size(x,y);
+                    }
+                    _ => ()
+                }
+            }
+        }
     }
 }
 
-impl<'a, A> Fn<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
-    extern "rust-call" fn call(&self, _args: (&'a mut A, ActionMsg)) {
-        println!("{}", self.time());
-    }
-}
 
 
 
@@ -165,18 +205,14 @@ impl<'a, A> Fn<(&'a mut A, ActionMsg)> for Animation where A: Animateable {
 
 
 
-
-type Func<E> = Box<Fn(&mut E, ActionMsg)>;
-
-
-pub struct MultiSocket<E: Element> {
+pub struct MultiSocket<E: Animateable> {
     is_setup: bool,
     pub element: Box<E>,
 
-    functions: Vec<(ActionMsg, Func<E>)>,
+    functions: Vec<(ActionMsg, Box<Animation>)>,
 }
 
-impl<E> MultiSocket<E> where E: Element {
+impl<E> MultiSocket<E> where E: Animateable {
     pub fn new(element: Box<E>) -> Box<Self> {
         Box::new(MultiSocket {
             is_setup: false,
@@ -185,23 +221,31 @@ impl<E> MultiSocket<E> where E: Element {
         })
     }
 
-    pub fn push(&mut self, msg_type: ActionMsg, receive: Func<E>) {
+    pub fn push(&mut self, msg_type: ActionMsg, receive: Box<Animation>) {
         self.functions.push( (msg_type, receive) );
     }
 
-    pub fn with_action_receive(mut self, msg_type: ActionMsg, receive: Func<E>) -> Box<Self> {
+    pub fn with_action_receive(mut self, msg_type: ActionMsg, receive: Box<Animation>) -> Box<Self> {
         self.push( msg_type, receive );
         Box::new(self)
     }
 }
 
 
-impl<E> Element for MultiSocket<E> where E: Element {
+impl<E> Element for MultiSocket<E> where E: Animateable {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.element.setup(ui);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
+        let mut res = true;
+        for &(ref msg, ref anim) in &self.functions {
+            if anim.is_running() {
+                //anim(&self.element);
+                res = false;
+            }
+        }
+
         self.is_setup && self.element.is_setup()
     }
 
@@ -228,11 +272,24 @@ impl<E> Element for MultiSocket<E> where E: Element {
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
         // first MultiSocket, then content
         use std::mem::discriminant;
-        for &(ref m, ref fun) in &self.functions {
+
+        match msg.msg {
+            ActionMsgData::Update => {
+                for &mut (ref mut _msg, ref mut anim) in &mut self.functions {
+                    if anim.is_running() {
+                        anim(&mut self.element);
+                    }
+                }
+            },
+            _ => ()
+        }
+
+        for &mut (ref mut m, ref mut fun) in &mut self.functions {
             if m.sender_id == msg.sender_id &&
                 discriminant(&m.msg) == discriminant(&msg.msg) {
-
-                (fun)(&mut self.element, msg.clone());
+                //let mut anim: Animation = fun;
+                println!("MultiSocket: execute animation --------");
+                fun(&mut self.element);
             }
         }
         if !stop {
@@ -335,5 +392,3 @@ impl<E> Element for Socket<E> where E: Element {
         }
     }
 }
-
-

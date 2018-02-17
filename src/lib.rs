@@ -15,6 +15,69 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 
 
+
+
+
+
+
+
+
+use std::thread;
+
+pub struct Timer {
+    handle: thread::JoinHandle<()>,
+}
+impl Timer {
+    pub fn new(sender: Sender<ActionMsg>, receiver: Receiver<ActionMsg>, fps: f64) -> Self {
+        use std::thread;
+        let handle = thread::spawn(move ||{
+            'run: loop {
+                'receive: loop {
+                    match receiver.try_recv() {
+                        Ok(msg) => {
+                            //println!("Timer: message received: {:?}", msg);
+
+                            match msg.msg {
+                                ActionMsgData::Exit => break 'run,
+                                _ => ()
+                            }
+
+                        },
+                        _ => break 'receive
+                    }
+                }
+                sender.send(ActionMsg{
+                    sender_id: "timer".to_string(),
+                    msg: ActionMsgData::Update,
+                });
+                thread::sleep_ms((1000.0/fps) as u32);
+            }
+        });
+        Timer{
+            handle
+        }
+    }
+
+    pub fn stop(mut self) {
+        let _ = self.handle.join();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pub fn example() {
 
     let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
@@ -51,7 +114,7 @@ pub fn example() {
                 .with_id("Hey".to_string())
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
-            PadElementSize::Relative(0.5, 0.5)
+            PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.5))
         ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
     );
     sublist.push(
@@ -73,7 +136,7 @@ pub fn example() {
                     println!("List -> Button");
                 })),
             PadAlignment::Center,
-            PadElementSize::AbsoluteNeg(20,20)
+            PadElementSize::Negative(Dim::Absolute(20),Dim::Absolute(20))
         )
     );
 
@@ -85,7 +148,7 @@ pub fn example() {
                 println!("List -> Pad -> Button with const size");
             })),
         PadAlignment::TopLeft,
-        PadElementSize::Absolute(200, 200) )
+        PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
         .with_background(Background::Color(conrod::color::LIGHT_BLUE))
     );
 
@@ -137,14 +200,14 @@ pub fn example() {
             .with_id("Action".to_string())
             .with_sender(base_sender),
         PadAlignment::Center,
-        PadElementSize::Relative(0.5, 0.4)
+        PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.4))
     ));
 
 
     base_window.add_element(Pad::new(
         layers,
         PadAlignment::Center,
-        PadElementSize::AbsoluteNeg(25,25)
+        PadElementSize::Negative(Dim::Absolute(25),Dim::Absolute(25))
     ));
 
     base_window.run(-1f64);

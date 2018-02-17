@@ -11,7 +11,7 @@ use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{self, Sender, Receiver};
 
 
 
@@ -362,7 +362,7 @@ impl<T> Debug for Ring<T> where T: Num + NumCast + PartialOrd + Copy + Debug {
 
 
 
-
+#[derive(Debug, Copy, Clone)]
 pub enum Dim {
     Absolute(i32),
     Relative(f64),
@@ -634,8 +634,10 @@ pub struct BaseWindow {
     ui: conrod::Ui,
 
     element: Option<Box<Element>>,
-    receiver: Option<Receiver<ActionMsg>>,
+    receivers: Vec<Receiver<ActionMsg>>,
     senders: Vec<Sender<ActionMsg>>,
+
+    selfsender: Sender<ActionMsg>,
 }
 
 impl BaseWindow {
@@ -652,7 +654,7 @@ impl BaseWindow {
     }
 
     pub fn add_receiver(&mut self, receiver: Receiver<ActionMsg>) {
-        self.receiver = Some(receiver);
+        self.receivers.push(receiver);
     }
 
     pub fn add_sender(&mut self, sender: Sender<ActionMsg>) {
@@ -693,6 +695,9 @@ impl BaseWindow {
         // image mapping, here: none
         let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
+        let (selfsender, selfreceiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
+            = mpsc::channel();
+
 
         BaseWindow {
             events_loop,
@@ -701,8 +706,9 @@ impl BaseWindow {
             image_map,
             ui,
             element: None,
-            receiver: None,
+            receivers: vec![selfreceiver],
             senders: Vec::new(),
+            selfsender
         }
     }
 
@@ -729,6 +735,7 @@ impl BaseWindow {
 
 
             let mut update = false;
+            let mut resized = false;
 
             // process events
             for event in events.drain(..) {
@@ -738,6 +745,23 @@ impl BaseWindow {
                 match event.clone() {
                     Event::WindowEvent { event, .. } => {
                         match event {
+                            WindowEvent::CursorMoved {
+                                position: (x,y),
+                                ..
+                            } => {
+                                println!("mouse moved {}, {}",x,y);
+                                for sender in &mut self.senders {
+                                    let _ = sender.send(ActionMsg{
+                                        sender_id: "window".to_string(),
+                                        msg: ActionMsgData::Mouse(x,y)
+                                    });
+                                }
+
+                                let _ = self.selfsender.send(ActionMsg{
+                                    sender_id: "window".to_string(),
+                                    msg: ActionMsgData::Mouse(x,y)
+                                });
+                            },
                             WindowEvent::Closed |
                             WindowEvent::KeyboardInput {
                                 input: KeyboardInput{
@@ -745,7 +769,17 @@ impl BaseWindow {
                                     ..
                                 },
                                 ..
-                            } => break 'render,
+                            } => {
+                                for sender in &mut self.senders {
+                                    let _ = sender.send(ActionMsg{
+                                        sender_id: "window".to_string(),
+                                        msg: ActionMsgData::Exit
+                                    });
+                                }
+                                use std::thread;
+                                thread::sleep_ms(1000);
+                                break 'render
+                            },
                             WindowEvent::Resized(mut w, mut h) => {
 
                                 // TODO is this limit necessary?
@@ -759,6 +793,7 @@ impl BaseWindow {
                                     if h < min.y as u32 { h = min.y as u32; }
 
                                     window_frame = Frame::new_with_size(w as i32,h as i32);
+                                    resized = true;
                                 }
                             }
                             _ => (),
@@ -790,7 +825,7 @@ impl BaseWindow {
             }
 
             // check if msgs have to be processed and transmit through chain
-            if let &Some(ref receiver) = &self.receiver {
+            for receiver in &self.receivers {
                 'receive: loop {
                     match receiver.try_recv() {
                         Ok(msg) => {
@@ -808,16 +843,22 @@ impl BaseWindow {
                 }
             }
 
-            if update {
-                if let Some(ref mut el) = self.element {
-                    if !el.is_setup() {
-                        el.setup(&mut self.ui);
-                    }
+            if let Some(ref mut el) = self.element {
+                if !el.is_setup() {
+                    el.setup(&mut self.ui);
                 }
+            }
 
-                let ui = &mut self.ui.set_widgets();
+            if resized {
                 if let Some(ref mut el) = self.element {
                     el.set_frame(window_frame, window_frame.center());
+                }
+            }
+
+            if update {
+                let ui = &mut self.ui.set_widgets();
+                if let Some(ref mut el) = self.element {
+                    //el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui);
                 }
             }
