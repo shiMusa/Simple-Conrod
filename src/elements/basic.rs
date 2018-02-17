@@ -12,7 +12,7 @@ use std::sync::mpsc::{Sender};
 
 
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 
 
@@ -26,6 +26,16 @@ const DEBUG: bool = true;
 
 
 
+/*
+db       .d8b.  d8888b. d88888b db
+88      d8' `8b 88  `8D 88'     88
+88      88ooo88 88oooY' 88ooooo 88
+88      88~~~88 88~~~b. 88~~~~~ 88
+88booo. 88   88 88   8D 88.     88booo.
+Y88888P YP   YP Y8888P' Y88888P Y88888P
+
+
+*/
 
 
 
@@ -167,6 +177,16 @@ impl Backgroundable for Label {
 
 
 
+/*
+d8888b. db    db d888888b d888888b  .d88b.  d8b   db
+88  `8D 88    88 `~~88~~' `~~88~~' .8P  Y8. 888o  88
+88oooY' 88    88    88       88    88    88 88V8o 88
+88~~~b. 88    88    88       88    88    88 88 V8o88
+88   8D 88b  d88    88       88    `8b  d8' 88  V888
+Y8888P' ~Y8888P'    YP       YP     `Y88P'  VP   V8P
+
+
+*/
 
 
 widget_ids!(

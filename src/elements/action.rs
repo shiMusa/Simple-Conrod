@@ -114,10 +114,9 @@ YP   YP VP   V8P Y888888P YP  YP  YP YP   YP    YP    Y888888P  `Y88P'  VP   V8P
 
 
 
-#[allow(unused_attributes)]
 pub trait Animateable : Element {
-    fn animate_size(&mut self, xy: (Dim,Dim)) {}
-    fn animate_position(&mut self, xy: (Dim,Dim)) {}
+    fn animate_size(&mut self, _xy: (Dim,Dim)) {}
+    fn animate_position(&mut self, _xy: (Dim,Dim)) {}
     fn start(&mut self){}
     fn run(&mut self){}
     fn reset(&mut self);
