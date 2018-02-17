@@ -4,6 +4,9 @@ use conrod;
 use elements::*;
 
 
+use time::precise_time_ns;
+
+
 
 #[allow(dead_code)]
 const DEBUG: bool = false;
@@ -19,6 +22,16 @@ const DEBUG: bool = false;
 
 
 
+/*
+ .d8b.   .o88b. d888888b d888888b  .d88b.  d8b   db .88b  d88. .d8888.  d888b
+d8' `8b d8P  Y8 `~~88~~'   `88'   .8P  Y8. 888o  88 88'YbdP`88 88'  YP 88' Y8b
+88ooo88 8P         88       88    88    88 88V8o 88 88  88  88 `8bo.   88
+88~~~88 8b         88       88    88    88 88 V8o88 88  88  88   `Y8b. 88  ooo
+88   88 Y8b  d8    88      .88.   `8b  d8' 88  V888 88  88  88 db   8D 88. ~8~
+YP   YP  `Y88P'    YP    Y888888P  `Y88P'  VP   V8P YP  YP  YP `8888Y'  Y888P
+
+
+*/
 
 
 
@@ -87,34 +100,38 @@ pub trait ActionSendable {
 
 
 
+/*
+ .d8b.  d8b   db d888888b .88b  d88.  .d8b.  d888888b d888888b  .d88b.  d8b   db
+d8' `8b 888o  88   `88'   88'YbdP`88 d8' `8b `~~88~~'   `88'   .8P  Y8. 888o  88
+88ooo88 88V8o 88    88    88  88  88 88ooo88    88       88    88    88 88V8o 88
+88~~~88 88 V8o88    88    88  88  88 88~~~88    88       88    88    88 88 V8o88
+88   88 88  V888   .88.   88  88  88 88   88    88      .88.   `8b  d8' 88  V888
+YP   YP VP   V8P Y888888P YP  YP  YP YP   YP    YP    Y888888P  `Y88P'  VP   V8P
 
 
-use time::precise_time_ns;
+*/
 
 
 
 
+#[allow(unused_attributes)]
 pub trait Animateable : Element {
-    fn is_size_animateable(&self) -> bool;
-    fn is_position_animateable(&self) -> bool;
-
-    fn animate_size(&mut self, x: Dim, y: Dim);
-    fn animate_position(&mut self, x: Dim, y: Dim);
-
+    fn animate_size(&mut self, xy: (Dim,Dim)) {}
+    fn animate_position(&mut self, xy: (Dim,Dim)) {}
+    fn start(&mut self){}
+    fn run(&mut self){}
     fn reset(&mut self);
 }
 
 
-pub enum AnimationFunction {
-    Size(Box<Fn(f64) -> (Dim,Dim)>),
-    Position(Box<Fn(f64) -> (Dim,Dim)>),
-    No
+
+pub trait SizeAnimation {
+    fn calc(&self, t: f64, duration: f64) -> (Dim, Dim);
 }
 
-
-
-
-
+pub trait PositionAnimation {
+    fn calc(&self, t: f64, duration: f64) -> (Dim, Dim);
+}
 
 
 
@@ -122,31 +139,41 @@ pub enum AnimationFunction {
 
 
 pub struct Animation {
-    start_time: u64,
-    functions: Vec<AnimationFunction>,
+    pub element: Box<Animateable>,
 
-    running: bool,
+    size_animation: Option<Box<SizeAnimation>>,
+    position_animation: Option<Box<PositionAnimation>>,
+
     duration: f64,
+    start_time: u64,
+    running: bool,
 }
 
 impl Animation {
-    pub fn new(duration: f64) -> Self {
-        Animation {
+    pub fn new(element: Box<Animateable>) -> Box<Self> {
+        Box::new(Animation {
+            element,
+            size_animation: None,
+            position_animation: None,
+            duration: 100.0,
             start_time: 0,
-            functions: Vec::new(),
-
-            running: false,
-            duration,
-        }
+            running: false
+        })
     }
 
-    pub fn with_function(mut self, function: AnimationFunction) -> Animation {
-        self.functions.push(function);
-        self
+    pub fn with_duration(mut self, duration_ms: f64) -> Box<Self> {
+        self.duration = duration_ms;
+        Box::new(self)
     }
 
-    pub fn is_running(&self) -> bool {
-        self.running
+    pub fn with_size_animation(mut self, animation: Box<SizeAnimation>) -> Box<Self> {
+        self.size_animation = Some(animation);
+        Box::new(self)
+    }
+
+    pub fn with_position_animation(mut self, animation: Box<PositionAnimation>) -> Box<Self> {
+        self.position_animation = Some(animation);
+        Box::new(self)
     }
 
     fn time(&self) -> f64 {
@@ -154,103 +181,65 @@ impl Animation {
     }
 }
 
-impl<'a, A> FnOnce<(&'a mut Box<A>,)> for Animation where A: Animateable {
-    type Output = (); // time in ms
-    extern "rust-call" fn call_once(mut self, args: (&'a mut Box<A>,)) {
-        self.call_mut(args)
+
+impl Animateable for Animation {
+    fn animate_size(&mut self, xy: (Dim,Dim)) {
+        self.element.animate_size(xy);
     }
-}
+    fn animate_position(&mut self, xy: (Dim,Dim)) {
+        self.element.animate_position(xy);
+    }
 
-impl<'a, A> FnMut<(&'a mut Box<A>,)> for Animation where A: Animateable {
-    extern "rust-call" fn call_mut(&mut self, args: (&'a mut Box<A>,)) {
-
+    fn start(&mut self) {
         // start animation if not already running
         if !self.running {
             self.start_time = precise_time_ns();
             self.running = true;
         }
+        self.element.start();
+    }
 
-        // stop animation when duration reached
-        if self.time() > self.duration {
+    fn run(&mut self) {
+        let mut do_reset = false;
+        let tau = self.duration;
+        let t = self.time();
+        let t = if self.running && t < self.duration {
+            t
+        } else {
             self.running = false;
-            (args.0).reset();
+            do_reset = true;
+            tau
+        };
+
+        if let Some(ref f) = self.size_animation {
+            self.element.animate_size(f.calc(t,tau));
+        }
+        if let Some(ref f) = self.position_animation {
+            self.element.animate_position(f.calc(t,tau));
         }
 
-        // if running: animate
-        if self.running {
-            let anim = args.0;
+        if do_reset { self.element.reset() }
+    }
 
-            let t = self.time();
-            for fun in &self.functions {
-                match fun {
-                    &AnimationFunction::Size(ref size_fun) => {
-                        let (x,y) = size_fun(t);
-                        anim.animate_size(x,y);
-                    }
-                    _ => ()
-                }
-            }
+    fn reset(&mut self) {
+        if !self.running {
+            self.element.reset();
         }
     }
 }
 
 
-
-
-
-
-
-
-
-
-
-
-pub struct AnimationSocket<E: Animateable> {
-    is_setup: bool,
-    pub element: Box<E>,
-
-    functions: Vec<(ActionMsg, Box<Animation>)>,
-}
-
-impl<E> AnimationSocket<E> where E: Animateable {
-    pub fn new(element: Box<E>) -> Box<Self> {
-        Box::new(AnimationSocket {
-            is_setup: false,
-            element,
-            functions: Vec::new()
-        })
-    }
-
-    pub fn push(&mut self, msg_type: ActionMsg, receive: Box<Animation>) {
-        self.functions.push( (msg_type, receive) );
-    }
-
-    pub fn with_action_receive(mut self, msg_type: ActionMsg, receive: Box<Animation>) -> Box<Self> {
-        self.push( msg_type, receive );
-        Box::new(self)
-    }
-}
-
-
-impl<E> Element for AnimationSocket<E> where E: Animateable {
+impl Element for Animation {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.element.setup(ui);
-        self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
-        let mut res = true;
-        for &(ref msg, ref anim) in &self.functions {
-            if anim.is_running() {
-                //anim(&self.element);
-                res = false;
-            }
-        }
-
-        self.is_setup && self.element.is_setup()
+        self.element.is_setup()
     }
 
-    fn stop(&self) {
+    fn stop(&mut self) {
         self.element.stop();
+        self.running = false;
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
         self.element.build_window(ui);
@@ -270,28 +259,13 @@ impl<E> Element for AnimationSocket<E> where E: Animateable {
         self.element.get_max_size()
     }
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
-        // first MultiSocket, then content
-        use std::mem::discriminant;
-
         match msg.msg {
             ActionMsgData::Update => {
-                for &mut (ref mut _msg, ref mut anim) in &mut self.functions {
-                    if anim.is_running() {
-                        anim(&mut self.element);
-                    }
-                }
+                self.run();
             },
             _ => ()
         }
 
-        for &mut (ref mut m, ref mut fun) in &mut self.functions {
-            if m.sender_id == msg.sender_id &&
-                discriminant(&m.msg) == discriminant(&msg.msg) {
-                //let mut anim: Animation = fun;
-                println!("MultiSocket: execute animation --------");
-                fun(&mut self.element);
-            }
-        }
         if !stop {
             self.element.transmit_msg(msg, false);
         }
@@ -328,6 +302,16 @@ impl<E> Element for AnimationSocket<E> where E: Animateable {
 
 
 
+/*
+.d8888.  .d88b.   .o88b. db   dD d88888b d888888b
+88'  YP .8P  Y8. d8P  Y8 88 ,8P' 88'     `~~88~~'
+`8bo.   88    88 8P      88,8P   88ooooo    88
+  `Y8b. 88    88 8b      88`8b   88~~~~~    88
+db   8D `8b  d8' Y8b  d8 88 `88. 88.        88
+`8888Y'  `Y88P'   `Y88P' YP   YD Y88888P    YP
+
+
+*/
 
 
 
@@ -364,7 +348,7 @@ impl<E> Element for Socket<E> where E: Element {
         self.is_setup && self.element.is_setup()
     }
 
-    fn stop(&self) {
+    fn stop(&mut self) {
         self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {

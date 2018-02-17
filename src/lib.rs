@@ -19,6 +19,16 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 
 
+/*
+d888888b d888888b .88b  d88. d88888b d8888b.
+`~~88~~'   `88'   88'YbdP`88 88'     88  `8D
+   88       88    88  88  88 88ooooo 88oobY'
+   88       88    88  88  88 88~~~~~ 88`8b
+   88      .88.   88  88  88 88.     88 `88.
+   YP    Y888888P YP  YP  YP Y88888P 88   YD
+
+
+*/
 
 
 
@@ -30,6 +40,10 @@ pub struct Timer {
 impl Timer {
     pub fn new(sender: Sender<ActionMsg>, receiver: Receiver<ActionMsg>, fps: f64) -> Self {
         use std::thread;
+        use std::time::Duration;
+
+        let dur = Duration::from_millis((1000.0/fps) as u64);
+
         let handle = thread::spawn(move ||{
             'run: loop {
                 'receive: loop {
@@ -46,11 +60,11 @@ impl Timer {
                         _ => break 'receive
                     }
                 }
-                sender.send(ActionMsg{
+                let _ = sender.send(ActionMsg{
                     sender_id: "timer".to_string(),
                     msg: ActionMsgData::Update,
                 });
-                thread::sleep_ms((1000.0/fps) as u32);
+                thread::sleep(dur);
             }
         });
         Timer{
@@ -58,7 +72,7 @@ impl Timer {
         }
     }
 
-    pub fn stop(mut self) {
+    pub fn stop(self) {
         let _ = self.handle.join();
     }
 }
@@ -73,6 +87,16 @@ impl Timer {
 
 
 
+/*
+d88888b db    db  .d8b.  .88b  d88. d8888b. db      d88888b
+88'     `8b  d8' d8' `8b 88'YbdP`88 88  `8D 88      88'
+88ooooo  `8bd8'  88ooo88 88  88  88 88oodD' 88      88ooooo
+88~~~~~  .dPYb.  88~~~88 88  88  88 88~~~   88      88~~~~~
+88.     .8P  Y8. 88   88 88  88  88 88      88booo. 88.
+Y88888P YP    YP YP   YP YP  YP  YP 88      Y88888P Y88888P
+
+
+*/
 
 
 
@@ -80,9 +104,9 @@ impl Timer {
 
 pub fn example() {
 
-    let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
+    let mut window = Window::new("Container".to_string(), 800, 800);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-    base_window.add_receiver(base_receiver);
+    window.add_receiver(base_receiver);
 
     let mut layers = Layers::new();
 
@@ -204,11 +228,11 @@ pub fn example() {
     ));
 
 
-    base_window.add_element(Pad::new(
+    window.add_element(Pad::new(
         layers,
         PadAlignment::Center,
         PadElementSize::Negative(Dim::Absolute(25),Dim::Absolute(25))
     ));
 
-    base_window.run(-1f64);
+    window.run(-1f64);
 }

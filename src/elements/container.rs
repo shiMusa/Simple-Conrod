@@ -33,6 +33,16 @@ const DEBUG: bool = false;
 
 
 
+/*
+d88888b .88b  d88. d8888b. d888888b db    db
+88'     88'YbdP`88 88  `8D `~~88~~' `8b  d8'
+88ooooo 88  88  88 88oodD'    88     `8bd8'
+88~~~~~ 88  88  88 88~~~      88       88
+88.     88  88  88 88         88       88
+Y88888P YP  YP  YP 88         YP       YP
+
+
+*/
 
 
 
@@ -80,6 +90,16 @@ impl Element for Empty {
 
 
 
+/*
+db       .d8b.  db    db d88888b d8888b. .d8888.
+88      d8' `8b `8b  d8' 88'     88  `8D 88'  YP
+88      88ooo88  `8bd8'  88ooooo 88oobY' `8bo.
+88      88~~~88    88    88~~~~~ 88`8b     `Y8b.
+88booo. 88   88    88    88.     88 `88. db   8D
+Y88888P YP   YP    YP    Y88888P 88   YD `8888Y'
+
+
+*/
 
 
 
@@ -132,8 +152,8 @@ impl Element for Layers {
         setup
     }
 
-    fn stop(&self) {
-        for el in &self.layers {
+    fn stop(&mut self) {
+        for el in &mut self.layers {
             el.stop();
         }
     }
@@ -200,6 +220,16 @@ impl Element for Layers {
 
 
 
+/*
+db      d888888b .d8888. d888888b
+88        `88'   88'  YP `~~88~~'
+88         88    `8bo.      88
+88         88      `Y8b.    88
+88booo.   .88.   db   8D    88
+Y88888P Y888888P `8888Y'    YP
+
+
+*/
 
 
 
@@ -314,8 +344,8 @@ impl Element for List {
         setup
     }
 
-    fn stop(&self) {
-        for el in &self.elements {
+    fn stop(&mut self) {
+        for el in &mut self.elements {
             el.stop();
         }
     }
@@ -407,6 +437,16 @@ impl Element for List {
 
 
 
+/*
+d8888b.  .d8b.  d8888b.
+88  `8D d8' `8b 88  `8D
+88oodD' 88ooo88 88   88
+88~~~   88~~~88 88   88
+88      88   88 88  .8D
+88      YP   YP Y8888D'
+
+
+*/
 
 
 
@@ -579,18 +619,10 @@ impl Pad {
 
 
 impl Animateable for Pad {
-    fn is_size_animateable(&self) -> bool {
-        true
-    }
-    fn is_position_animateable(&self) -> bool {
-        true
-    }
+    fn animate_size(&mut self, xy: (Dim,Dim)) {
+        let (x,y) = xy;
 
-    fn animate_size(&mut self, x: Dim, y: Dim) {
-
-        println!("Pad animating size!");
-
-        let c = self.original_frame.center();
+        let c = self.frame.center();
         let w = self.original_frame.width();
         let h = self.original_frame.height();
 
@@ -608,10 +640,33 @@ impl Animateable for Pad {
             p1: Vec2{ x: c.x+nx, y: c.y+ny}
         };
         let center = self.global_center;
-        println!("{:?}",frame);
         self.rescale(frame, center, false);
     }
-    fn animate_position(&mut self, x: Dim, y: Dim) {
+
+    fn animate_position(&mut self, xy: (Dim, Dim)) {
+        let (x,y) = xy;
+
+        let oc = self.original_frame.center();
+        let ow = self.original_frame.width();
+        let oh = self.original_frame.height();
+        let w = self.frame.width();
+        let h = self.frame.height();
+
+        let nx = match x {
+            Dim::Absolute(ix) => ix,
+            Dim::Relative(fx) => (ow as f64 / 2.0 * fx) as i32
+        };
+        let ny = match y {
+            Dim::Absolute(iy) => iy,
+            Dim::Relative(fy) => (oh as f64 / 2.0 * fy) as i32
+        };
+
+        let frame = Frame {
+            p0: oc + Vec2{x: - w/2 + nx, y: -h/2 + ny},
+            p1: oc + Vec2{x:   w/2 + nx, y:  h/2 + ny},
+        };
+        let center = self.global_center;
+        self.rescale(frame, center, false);
     }
 
     fn reset(&mut self) {
@@ -642,7 +697,7 @@ impl Element for Pad {
         self.is_setup && self.element.is_setup()
     }
 
-    fn stop(&self) {
+    fn stop(&mut self) {
         self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell) {
