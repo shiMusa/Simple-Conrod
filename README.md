@@ -32,7 +32,7 @@ Yellow: concrete end-elements
 
 Follow the arrows and you can see what objects you can nest into each other!
 
-<img src="https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure_v2.svg" width="100%" height="400">
+<img src="https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure.svg" width="100%" height="400">
 
 # Adding Elements
 
