@@ -25,7 +25,7 @@ Check back in future for more stuff :3
 Also: <b>There's much more already</b> than what's explained down below! Here you have an overview of the system:
 
 
-<img src="https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure.svg" width="100%" height="400">
+<img src="https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure_v2.svg" width="100%" height="400">
 
 # Adding Elements
 
