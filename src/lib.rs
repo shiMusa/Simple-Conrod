@@ -234,5 +234,5 @@ pub fn example() {
         PadElementSize::Negative(Dim::Absolute(25),Dim::Absolute(25))
     ));
 
-    window.run(-1f64);
+    window.run();
 }

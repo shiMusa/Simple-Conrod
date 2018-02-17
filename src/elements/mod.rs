@@ -782,7 +782,11 @@ impl Window {
         }
     }
 
-    pub fn run(&mut self, fps: f64) {
+    pub fn run(&mut self) {
+        self.run_with_fps(-1f64);
+    }
+
+    pub fn run_with_fps(&mut self, fps: f64) {
 
         self.setup();
 
