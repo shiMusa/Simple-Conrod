@@ -22,7 +22,9 @@ Already implemented:
 For now, only a few visible elements like Button and Label are implemented. But the idea is that it should be relatively easy to create new elements which can be immediately included in you gui-design.
 Check back in future for more stuff :3
 
-Also: <b>There's much more already</b> than what's explained down below! check out the ```main()``` function!
+Also: <b>There's much more already</b> than what's explained down below! Here you have an overview of the system:
+
+![example application](https://github.com/shiMusa/Simple-Conrod/blob/master/ProgramStructure.SVG)
 
 # Adding Elements
 
