@@ -1,7 +1,9 @@
 # Simple-Conrod
 
-A simple, user-friendly and multi-threading enabled gui-framework in <b>Rust</b> based on <b>Conrod</b>
-Example can be found in main() function.
+A simple, user-friendly and multi-threading enabled gui-framework in <b>Rust</b> based on <b>Conrod</b>.
+
+Examples can be found by executing ```example()``` or ```example2()``` from the library.
+
 <b>heavy WIP!</b>
 
 Already implemented:
@@ -29,7 +31,7 @@ For more info, see below.</i>
 
 Creating a new window with title and size:
 ```rust
-let mut base_window = BaseWindow::new("Container".to_string(), 800, 800);
+let mut window = Window::new("Container".to_string(), 800, 800);
 ```
 
 All elements implement the trait Element so that they can be arbitrarily nested.
@@ -49,8 +51,8 @@ list.push(
 
 In the end, we want to add the list to the window and let the window run:
 ```rust
-base_window.add_element(list);
-base_window.run();
+window.add_element(list);
+window.run();
 ```
 
 In case you want to force redraws of the window, you can use ```window.run_with_fps(fps: f64)``` or a ```Timer```, which will send ```Update``` messages at a given fps rate.
@@ -81,7 +83,7 @@ let button = Button::new().with_action_click(Box::new(|| {
 
 On the receiver side, the window accepts a receiver
 ```rust
-base_window.add_receiver(receiver);
+window.add_receiver(receiver);
 ```
 which will transmit the messages down the chain of Elements.
 For an Element to receive a message, we need to wrap it in an ```Socket``` 
