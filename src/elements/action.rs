@@ -240,8 +240,8 @@ impl Element for Animation {
         self.element.stop();
         self.running = false;
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.element.build_window(ui);
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
+        self.element.build_window(ui, ressources);
     }
 
     fn get_frame(&self) -> Frame<i32> {
@@ -350,8 +350,8 @@ impl<E> Element for Socket<E> where E: Element {
     fn stop(&mut self) {
         self.element.stop();
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
-        self.element.build_window(ui);
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
+        self.element.build_window(ui, ressources);
     }
 
     fn get_frame(&self) -> Frame<i32> {

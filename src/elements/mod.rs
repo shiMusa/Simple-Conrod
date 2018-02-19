@@ -12,6 +12,11 @@ use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
 use std::sync::mpsc::{self, Sender, Receiver};
+use std::collections::HashMap;
+use std::path::Path;
+
+use find_folder;
+use image;
 
 
 
@@ -619,7 +624,7 @@ pub trait Element {
     fn is_setup(&self) -> bool;
 
     fn stop(&mut self) {}
-    fn build_window(&self, ui: &mut conrod::UiCell);
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources);
 
     fn get_frame(&self) -> Frame<i32>;
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>);
@@ -642,6 +647,9 @@ pub trait Clickable {
 pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
     fn set_label(&mut self, label: String);
+
+    fn with_font(self, font: String) -> Box<Self>;
+    fn set_font(&mut self, font: String);
 }
 
 pub trait Colorable {
@@ -692,8 +700,27 @@ Y8   I8I   88    88    88 V8o88 88   88 88    88 Y8   I8I   88
 
 
 */
+pub struct WindowRessources {
+    fonts: HashMap<String, conrod::text::font::Id>,
+}
+impl WindowRessources {
+    pub fn new() -> Self {
+        WindowRessources {
+            fonts: HashMap::new(),
+        }
+    }
 
+    pub fn add_font(&mut self,  ui: &mut conrod::Ui, id: String, path: &Path) {
+        self.fonts.insert(
+            id, 
+            ui.fonts.insert_from_file(path).unwrap()
+        );
+    }
 
+    pub fn font(&self, id: &String) -> Option<&conrod::text::font::Id> {
+        self.fonts.get(id)
+    }
+}
 
 
 pub struct Window {
@@ -708,6 +735,8 @@ pub struct Window {
     senders: Vec<Sender<ActionMsg>>,
 
     selfsender: Sender<ActionMsg>,
+
+    ressources: WindowRessources,
 }
 
 impl Window {
@@ -717,6 +746,18 @@ impl Window {
             el.setup(&mut self.ui);
         }
     }
+
+
+
+    pub fn add_font(&mut self, id: String, path: &Path) {
+        self.ressources.add_font(
+            &mut self.ui,
+            id, 
+            path
+        );
+    }
+
+
 
 
     pub fn add_element(&mut self, element: Box<Element>) {
@@ -753,11 +794,25 @@ impl Window {
         ).build();
 
 
+        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+        let mut ressources = WindowRessources::new();
+        ressources.add_font(
+            &mut ui,
+            "NotoSans-Regular".to_string(), 
+            &assets.join("fonts/NotoSans/NotoSans-Regular.ttf")
+        );
+
+        // Add a `Font` to the `Ui`'s `font::Map` from file.
+        //let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+        //let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
+        //ui.fonts.insert_from_file(font_path).unwrap();
+
         // Add a font to the ui's font::map from file
-        const FONT_PATH: &'static str =
+        /*const FONT_PATH: &'static str =
             concat!(env!("CARGO_MANIFEST_DIR"),
                 "\\assets\\fonts\\NotoSans\\NotoSans-Regular.ttf");
-        ui.fonts.insert_from_file(FONT_PATH).unwrap();
+        ui.fonts.insert_from_file(FONT_PATH).unwrap();*/
 
         // connect conrod::render::Primitives to glium Surface
         let renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
@@ -778,7 +833,8 @@ impl Window {
             element: None,
             receivers: vec![selfreceiver],
             senders: Vec::new(),
-            selfsender
+            selfsender,
+            ressources
         }
     }
 
@@ -937,9 +993,10 @@ impl Window {
 
             if update {
                 let ui = &mut self.ui.set_widgets();
+                let res = &self.ressources;
                 if let Some(ref mut el) = self.element {
                     //el.set_frame(window_frame, window_frame.center());
-                    el.build_window(ui);
+                    el.build_window(ui, res);
                 }
             }
 

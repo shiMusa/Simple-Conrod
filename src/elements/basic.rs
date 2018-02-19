@@ -52,6 +52,7 @@ widget_ids!(
 pub struct Label {
     text: String,
     font_size: u32,
+    font: Option<String>,
     color: conrod::Color,
     background: Background,
 
@@ -70,6 +71,7 @@ impl Label {
         Box::new(Label {
             text,
             font_size,
+            font: None,
             color: conrod::color::BLACK,
             background: Background::None,
             is_setup: false,
@@ -88,7 +90,7 @@ impl Element for Label {
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{widget, Positionable, Colorable, Widget};
 
         if let Some(ref ids) = self.label_ids {
@@ -105,11 +107,20 @@ impl Element for Label {
                 }
             }
 
-            widget::Text::new(&self.text.to_owned())
+            let txt = self.text.to_owned();
+            let mut label = widget::Text::new(&txt)
                 .x_y(c.x as f64, c.y as f64)
                 .color(self.color)
-                .font_size(self.font_size)
-                .set(ids.label, ui);
+                .font_size(self.font_size);
+
+            if let Some(ref font) = self.font {
+                let fnt = ressources.font(font);
+                if let Some(fnt) = fnt {
+                    label = label.font_id(*fnt);
+                }
+            }
+
+            label.set(ids.label, ui);
         }
     }
 
@@ -138,6 +149,14 @@ impl Labelable for Label {
     }
     fn set_label(&mut self, label: String) {
         self.text = label;
+    }
+
+    fn with_font(mut self, font: String) -> Box<Self> {
+        self.font = Some(font);
+        Box::new(self)
+    }
+    fn set_font(&mut self, font: String) {
+        self.font = Some(font);
     }
 }
 
@@ -196,6 +215,8 @@ widget_ids!(
 );
 
 
+
+
 pub struct Button {
     id: String,
     senders: Vec<Sender<ActionMsg>>,
@@ -211,6 +232,7 @@ pub struct Button {
     color: conrod::Color,
 
     label: Option<String>,
+    font: Option<String>,
 }
 
 impl Button {
@@ -229,6 +251,7 @@ impl Button {
             click_fn: fun,
             color: conrod::color::GRAY,
             label: None,
+            font: None,
         });
 
         if DEBUG { println!("{:?}", button); }
@@ -270,6 +293,14 @@ impl Labelable for Button {
     fn set_label(&mut self, label: String) {
         self.label = Some(label);
     }
+
+    fn with_font(mut self, font: String) -> Box<Self> {
+        self.font = Some(font);
+        Box::new(self)
+    }
+    fn set_font(&mut self, font: String) {
+        self.font = Some(font);
+    }
 }
 
 
@@ -301,7 +332,7 @@ impl Element for Button {
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{widget, Positionable, Colorable, Widget, Sizeable, Labelable, Borderable};
 
         if let Some(ref ids) = self.button_ids {
@@ -315,6 +346,12 @@ impl Element for Button {
 
             if let Some(ref label) = self.label {
                 button = button.label(&label);
+            }
+            if let Some(ref font) = self.font {
+                let fnt = ressources.font(font);
+                if let Some(fnt) = fnt {
+                    button = button.label_font_id(*fnt);
+                }
             }
 
             let mut event = button.set(ids.button, ui);

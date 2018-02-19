@@ -66,7 +66,7 @@ impl Element for Empty {
     fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
     fn is_setup(&self) -> bool { self.is_setup }
 
-    fn build_window(&self, _ui: &mut conrod::UiCell) {}
+    fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 
     fn get_frame(&self) -> Frame<i32> { self.frame }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
@@ -157,9 +157,9 @@ impl Element for Layers {
             el.stop();
         }
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         for n in 0..self.layers.len() {
-            self.layers[n].build_window(ui,);
+            self.layers[n].build_window(ui, ressources);
         }
     }
 
@@ -349,9 +349,9 @@ impl Element for List {
             el.stop();
         }
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         for el in &self.elements {
-            el.build_window(ui);
+            el.build_window(ui, ressources);
         }
     }
 
@@ -700,7 +700,7 @@ impl Element for Pad {
     fn stop(&mut self) {
         self.element.stop();
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{Widget, Positionable};
 
         if let Some(ref ids) = self.ids {
@@ -717,7 +717,7 @@ impl Element for Pad {
                     rect.set(ids.background, ui);
                 }
             }
-            self.element.build_window(ui);
+            self.element.build_window(ui, ressources);
         }
     }
 

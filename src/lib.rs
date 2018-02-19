@@ -2,12 +2,15 @@
 #![feature(duration_extras)]
 #![feature(unboxed_closures)]
 #![feature(fn_traits)]
+#![feature(use_extern_macros)]
 
 pub mod elements;
 
 #[macro_use] extern crate conrod;
 extern crate time;
 extern crate num;
+extern crate find_folder;
+extern crate image;
 
 
 use elements::{*, container::*, basic::*, action::*};
@@ -140,7 +143,8 @@ pub fn expample2() {
     let pad = Pad::new(Button::new()
         .with_label("Press".to_string())
         .with_id("testbutton".to_string())
-        .with_sender(sender.clone()),
+        .with_sender(sender.clone())
+        .with_font("NotoSans-Regular".to_string()),
         PadAlignment::Center,
         PadElementSize::Positive(Dim::Relative(0.5),Dim::Relative(0.5))
     );
@@ -173,6 +177,13 @@ pub fn expample2() {
     let mut window = Window::new("Animation Test".to_string(), 800,800);
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
+
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    window.add_font(
+        "NotoSans-Italic".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+    );
 
     window.add_element(socket);
     window.run();
