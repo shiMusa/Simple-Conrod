@@ -34,6 +34,17 @@ widget_ids!(
     }
 );
 
+
+pub enum PlaneMode {
+    Stretch,
+    FitWidth,
+    FitHeight,
+    FitMin,
+    FitMax,
+    Tile,
+}
+
+
 pub struct Plane {
     ids: Option<PlaneIds>,
 
@@ -41,7 +52,8 @@ pub struct Plane {
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
-    graphic: Graphic
+    graphic: Graphic,
+    mode: PlaneMode,
 }
 
 impl Plane {
@@ -54,17 +66,27 @@ impl Plane {
             frame: Frame::new(),
 
             graphic,
+            mode: PlaneMode::Stretch,
         })
     }
 
-    fn build_textured(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources, texture: conrod::image::Id) {
+    fn build_textured(
+        &self, 
+        _ui: &mut conrod::UiCell, 
+        _ressources: &WindowRessources, 
+        texture: (u32,u32,conrod::image::Id),
+        texture_properties: &Texture
+    ) {
         use conrod::{Widget, widget, Positionable, Sizeable};
 
         if DEBUG { println!("building textured plane with image id {:?}", texture);}
         let c = self.frame.center()-self.global_center;
 
         if DEBUG { println!("creating plane image...");}
-        let img = widget::primitive::image::Image::new(texture)
+        let img = widget::primitive::image::Image::new(texture.2)
+            .source_rectangle(texture_properties.get_cut(
+                self.frame.width() as u32, self.frame.height() as u32, texture.0, texture.1
+            ))
             .x_y(c.x as f64, c.y as f64)
             .w_h(self.frame.width() as f64,self.frame.height() as f64);
         if let Some(ref ids) = self.ids {
@@ -112,8 +134,8 @@ impl Element for Plane {
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.graphic {
             Graphic::Texture(ref texture) => {
-                if let Some(tex) = ressources.image(texture) {
-                    self.build_textured(ui, ressources, *tex);
+                if let Some(tex) = ressources.image(&texture.get_id()) {
+                    self.build_textured(ui, ressources, *tex, &texture);
                     return;
                 };
             },
@@ -379,7 +401,14 @@ impl Button {
 
 
 
-    fn build_textured(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources, texture: conrod::image::Id) {
+    fn build_textured(
+        &self, 
+        ui: &mut conrod::UiCell, 
+        ressources: &WindowRessources, 
+        texture: (u32,u32,conrod::image::Id),
+        // TODO implement texture cut and scaling for button ////////////////////////////////////////
+        _texture_properties: &Texture
+    ) {
         use conrod::{widget, Positionable, Widget, Sizeable, Labelable, Borderable};
 
         if DEBUG { println!("building textured button with image id {:?}", texture);}
@@ -388,7 +417,7 @@ impl Button {
             let c = self.frame.center()-self.global_center;
 
             if DEBUG { println!("creating button...");}
-            let mut button = widget::Button::image(texture)
+            let mut button = widget::Button::image(texture.2)
                 .x_y(c.x as f64, c.y as f64)
                 .w_h(self.frame.width() as f64,self.frame.height() as f64)
                 .border(0f64);
@@ -543,8 +572,8 @@ impl Element for Button {
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.foreground {
             Graphic::Texture(ref texture) => {
-                if let Some(tex) = ressources.image(texture) {
-                    self.build_textured(ui, ressources, *tex);
+                if let Some(tex) = ressources.image(&texture.get_id()) {
+                    self.build_textured(ui, ressources, *tex, &texture);
                     return;
                 };
             },

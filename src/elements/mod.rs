@@ -7,6 +7,7 @@ pub mod action;
 
 use conrod;
 use conrod::backend::glium::glium::{self, Surface};
+use conrod::position::{Rect, Range};
 use time;
 use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
@@ -581,8 +582,133 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
 
 
 
+/*
+ d888b  d8888b.  .d8b.  d8888b. db   db d888888b  .o88b.
+88' Y8b 88  `8D d8' `8b 88  `8D 88   88   `88'   d8P  Y8
+88      88oobY' 88ooo88 88oodD' 88ooo88    88    8P
+88  ooo 88`8b   88~~~88 88~~~   88~~~88    88    8b
+88. ~8~ 88 `88. 88   88 88      88   88   .88.   Y8b  d8
+ Y888P  88   YD YP   YP 88      YP   YP Y888888P  `Y88P'
 
 
+*/
+
+
+#[derive(Debug, Clone)]
+pub enum Graphic {
+    Color(conrod::Color),
+    Texture(Texture),
+    None,
+}
+
+
+
+
+
+
+
+
+
+/*
+d888888b d88888b db    db d888888b db    db d8888b. d88888b
+`~~88~~' 88'     `8b  d8' `~~88~~' 88    88 88  `8D 88'
+   88    88ooooo  `8bd8'     88    88    88 88oobY' 88ooooo
+   88    88~~~~~  .dPYb.     88    88    88 88`8b   88~~~~~
+   88    88.     .8P  Y8.    88    88b  d88 88 `88. 88.
+   YP    Y88888P YP    YP    YP    ~Y8888P' 88   YD Y88888P
+
+
+*/
+
+#[derive(Debug, Copy, Clone)]
+pub enum TextureMode {
+    Stretch,
+    FitWidth,
+    FitHeight,
+    FitMin,
+    FitMax,
+    Tile,
+}
+
+#[derive(Debug, Clone)]
+pub struct Texture {
+    id: String,
+    cut: Option<Frame<u32>>,
+    mode: TextureMode,
+}
+
+impl Texture {
+    pub fn new(id: String) -> Self {
+        Texture {
+            id,
+            cut: None,
+            mode: TextureMode::Stretch,
+        }
+    }
+
+    pub fn get_id(&self) -> String {
+        self.id.clone()
+    }
+
+    pub fn set_cut(&mut self, cut: Frame<u32>) {
+        self.cut = Some(cut);
+    }
+
+    pub fn with_cut(mut self, cut: Frame<u32>) -> Self {
+        self.cut = Some(cut);
+        self
+    }
+
+    pub fn set_mode(&mut self, mode: TextureMode) {
+        self.mode = mode;
+    }
+
+    pub fn with_mode(mut self, mode: TextureMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    pub fn get_cut(&self, w: u32,h: u32, img_w: u32, img_h: u32) -> Rect {
+        //println!("get_cut() {} {} {} {}", w, h, img_w, img_h);
+        let mut tex_cut = match self.cut {
+            Some(c) => c,
+            None => Frame::new()
+        };
+
+        let ratio = w as f64 / h as f64;
+        let (min, max) = if w > h {(h,w)} else {(w,h)};
+
+        let img_ratio = img_w as f64 / img_h as f64;
+        let (img_min, img_max) = if img_w > img_h {(img_h, img_w)} else {(img_w, img_h)};
+
+        match self.mode {
+            TextureMode::FitHeight => {
+                Rect::from_corners([0.0,0.0], [ratio * img_w as f64, img_h as f64])
+            },
+            TextureMode::FitWidth => {
+                Rect::from_corners([0.0,0.0], [img_w as f64, img_h as f64 / ratio])
+            },
+            TextureMode::FitMax => {
+                if ratio > 1.0 {
+                    Rect::from_corners([0.0,0.0], [img_w as f64, img_h as f64 / ratio])
+                } else {
+                    Rect::from_corners([0.0,0.0], [ratio * img_w as f64, img_h as f64])
+                }
+            },
+            TextureMode::FitMin => {
+                if ratio < 1.0 {
+                    Rect::from_corners([0.0,0.0], [img_w as f64, img_h as f64 / ratio])
+                } else {
+                    Rect::from_corners([0.0,0.0], [ratio * img_w as f64, img_h as f64])
+                }
+            },
+            _ => {
+                println!("get_cut() Stretch");
+                Rect::from_corners([0.0, 0.0], [img_w as f64, img_h as f64])
+            },
+        }
+    }
+}
 
 
 
@@ -658,13 +784,6 @@ pub trait Colorable {
 }
 
 
-#[derive(Debug, Clone)]
-pub enum Graphic {
-    Color(conrod::Color),
-    Texture(String),
-    None,
-}
-
 pub trait Foregroundable {
     fn with_foreground(self, fg: Graphic) -> Box<Self>;
     fn set_foreground(&mut self, fg: Graphic);
@@ -708,7 +827,7 @@ Y8   I8I   88    88    88 V8o88 88   88 88    88 Y8   I8I   88
 pub struct WindowRessources {
     fonts: HashMap<String, conrod::text::font::Id>,
     image_map: conrod::image::Map<glium::texture::Texture2d>,
-    images: HashMap<String, conrod::image::Id>
+    images: HashMap<String, (u32, u32, conrod::image::Id)>
 }
 impl WindowRessources {
     pub fn new() -> Self {
@@ -732,15 +851,20 @@ impl WindowRessources {
         self.fonts.get(id)
     }
 
-    pub fn image(&self, id: &String) -> Option<&conrod::image::Id> {
+    pub fn image(&self, id: &String) -> Option<&(u32,u32,conrod::image::Id)> {
         self.images.get(id)
     }
 
     pub fn add_image(&mut self, display: &glium::Display, id: String, path: &Path) {
+        let img = Self::load_image(display, path);
+        let (w,h) = (img.get_width(), img.get_height().unwrap());
         self.images.insert(
             id,
-            self.image_map.insert(
-                Self::load_image(display, path)
+            (
+                w, h,
+                self.image_map.insert(
+                    Self::load_image(display, path)
+                )
             )
         );
         println!("image loaded into windowressource.");

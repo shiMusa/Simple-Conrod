@@ -91,15 +91,16 @@ impl Timer {
 
 
 /*
-d88888b db    db  .d8b.  .88b  d88. d8888b. db      d88888b
-88'     `8b  d8' d8' `8b 88'YbdP`88 88  `8D 88      88'
-88ooooo  `8bd8'  88ooo88 88  88  88 88oodD' 88      88ooooo
-88~~~~~  .dPYb.  88~~~88 88  88  88 88~~~   88      88~~~~~
-88.     .8P  Y8. 88   88 88  88  88 88      88booo. 88.
-Y88888P YP    YP YP   YP YP  YP  YP 88      Y88888P Y88888P
+d88888b db    db      .d888b.
+88'     `8b  d8'      VP  `8D
+88ooooo  `8bd8'          odD'
+88~~~~~  .dPYb.        .88'
+88.     .8P  Y8.      j88.
+Y88888P YP    YP      888888D
 
 
 */
+
 
 
 
@@ -172,18 +173,23 @@ pub fn expample2() {
 
     let mut layers = Layers::new();
 
-    layers.push(Plane::new(Graphic::Texture("JapaneseFan".to_string())));
+    layers.push(Plane::new(Graphic::Texture(
+        Texture::new("JapaneseFan".to_string())
+            .with_mode(TextureMode::FitMax)
+    )));
 
 
 
     let pad = Pad::new(Button::new()
-        .with_foreground(Graphic::Texture("RustLogo_hover".to_string()))
+        .with_foreground(Graphic::Texture(
+            Texture::new("RustLogo_hover".to_string())
+            ))
         .with_label("Press".to_string())
         .with_id("testbutton".to_string())
         .with_sender(sender.clone())
         .with_font("NotoSans-Regular".to_string()),
         PadAlignment::Center,
-        PadElementSize::Positive(Dim::Relative(0.5),Dim::Relative(0.5))
+        PadElementSize::Positive(Dim::Absolute(200),Dim::Absolute(200))
     );
 
     #[allow(unused_doc_comment)]
