@@ -449,12 +449,13 @@ d8888b.  .d8b.  d8888b.
 */
 
 
-
+#[derive(Debug, Copy, Clone)]
 pub enum PadElementSize {
     Positive(Dim, Dim),
     Negative(Dim, Dim),
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum PadAlignment {
     Center,
     TopLeft,
@@ -465,6 +466,7 @@ pub enum PadAlignment {
     Bottom,
     BottomLeft,
     Left,
+    XY(Dim, Dim),
 }
 
 widget_ids!(
@@ -483,7 +485,8 @@ pub struct Pad {
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
-    original_frame: Frame<i32>,
+    original_pad_size: PadElementSize,
+    original_alignment: PadAlignment,
 
     ids: Option<PadIds>,
     background: Graphic,
@@ -492,6 +495,7 @@ pub struct Pad {
 
 impl Pad {
     pub fn new(element: Box<Element>, alignment: PadAlignment, size: PadElementSize) -> Box<Self> {
+        //println!("Pad with size {:?}", size);
         Box::new(Pad {
             element,
             alignment,
@@ -499,15 +503,17 @@ impl Pad {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
-            original_frame: Frame::new(),
+            original_pad_size: size,
+            original_alignment: alignment,
             ids: None,
             background: Graphic::None,
         })
     }
 
 
-    fn update_original_frame(&mut self) {
-        self.original_frame = self.frame;
+    fn update_original_pad_size(&mut self) {
+        self.original_pad_size = self.pad_size;
+        self.original_alignment = self.alignment;
     }
 
     fn rescale(&mut self, frame: Frame<i32>, window_center: Vec2<i32>, limit: bool) {
@@ -551,6 +557,8 @@ impl Pad {
         }
 
         let center = self.frame.center();
+        let w = self.frame.width();
+        let h = self.frame.height();
 
         let frame: Frame<i32> = match self.alignment {
             Center => {
@@ -610,6 +618,21 @@ impl Pad {
                     p0: Vec2{x: self.frame.p0.x, y: midy - v.y/2},
                     p1: Vec2{x: self.frame.p0.x + v.x, y: midy + v.y/2}
                 }
+            },
+            XY(ax,ay) => {
+                let xx = match ax {
+                    Dim::Absolute(ix) => ix,
+                    Dim::Relative(fx) => (fx * w as f64/2.0) as i32,
+                };
+                let yy = match ay {
+                    Dim::Absolute(iy) => iy,
+                    Dim::Relative(fy) => (fy * h as f64/2.0) as i32,
+                };
+                let vv = Vec2{x: xx, y: yy};
+                Frame {
+                    p0: center - v/2 + vv,
+                    p1: center + v/2 + vv,
+                }
             }
         };
 
@@ -618,27 +641,61 @@ impl Pad {
 }
 
 
+// ! ////////////////////////////////////////////////////////////////////////////////////////
+// ! need to change pad_size, not frame!!! //////////////////////////////////////////////////
+// ! ////////////////////////////////////////////////////////////////////////////////////////
 impl Animateable for Pad {
     fn animate_size(&mut self, xy: (Dim,Dim)) {
-        let (x,y) = xy;
 
-        let c = self.frame.center();
-        let w = self.original_frame.width();
-        let h = self.original_frame.height();
+        let frame = self.frame;
+        let w = frame.width();
+        let h = frame.height();
 
-        let nx = match x {
-            Dim::Absolute(ix) => w/2 + ix,
-            Dim::Relative(fx) => (w as f64 / 2.0 * fx) as i32
-        };
-        let ny = match y {
-            Dim::Absolute(iy) => h/2 + iy,
-            Dim::Relative(fy) => (h as f64 / 2.0 * fy) as i32
+        //println!("w {}, h {}",w,h);
+        //println!("self.pad_size {:?}", self.pad_size);
+
+        let (px,py) = match self.original_pad_size {
+            PadElementSize::Positive(dx,dy) => {
+                let xx = match dx {
+                    Dim::Absolute(ix) => ix as f64,
+                    Dim::Relative(fx) => fx * w as f64
+                };
+                let yy = match dy {
+                    Dim::Absolute(iy) => iy as f64,
+                    Dim::Relative(iy) => iy * h as f64
+                };
+                (xx,yy)
+            },
+            PadElementSize::Negative(dx,dy) => {
+                let xx = match dx {
+                    Dim::Absolute(ix) => w as f64 - ix as f64,
+                    Dim::Relative(fx) => w as f64 - fx * w as f64
+                };
+                let yy = match dy {
+                    Dim::Absolute(iy) => h as f64 - iy as f64,
+                    Dim::Relative(fy) => h as f64 - fy * h as f64
+                };
+                (xx,yy)
+            }
         };
 
-        let frame = Frame {
-            p0: Vec2{ x: c.x-nx, y: c.y-ny},
-            p1: Vec2{ x: c.x+nx, y: c.y+ny}
+        let (x,y) = {
+            let xx = match xy.0 {
+                Dim::Absolute(ix) => ix as f64,
+                Dim::Relative(fx) => fx * px
+            };
+            let yy = match xy.1 {
+                Dim::Absolute(iy) => iy as f64,
+                Dim::Relative(fy) => fy * py
+            };
+            (xx,yy)
         };
+
+        self.pad_size = PadElementSize::Positive(
+            Dim::Absolute( (px+x) as i32),
+            Dim::Absolute( (py+y) as i32) 
+        );
+
         let center = self.global_center;
         self.rescale(frame, center, false);
     }
@@ -646,32 +703,18 @@ impl Animateable for Pad {
     fn animate_position(&mut self, xy: (Dim, Dim)) {
         let (x,y) = xy;
 
-        let oc = self.original_frame.center();
-        let ow = self.original_frame.width();
-        let oh = self.original_frame.height();
-        let w = self.frame.width();
-        let h = self.frame.height();
-
-        let nx = match x {
-            Dim::Absolute(ix) => ix,
-            Dim::Relative(fx) => (ow as f64 / 2.0 * fx) as i32
-        };
-        let ny = match y {
-            Dim::Absolute(iy) => iy,
-            Dim::Relative(fy) => (oh as f64 / 2.0 * fy) as i32
-        };
-
-        let frame = Frame {
-            p0: oc + Vec2{x: - w/2 + nx, y: -h/2 + ny},
-            p1: oc + Vec2{x:   w/2 + nx, y:  h/2 + ny},
-        };
+        self.alignment = PadAlignment::XY(x,y);
+        
+        let frame = self.frame;
         let center = self.global_center;
         self.rescale(frame, center, false);
     }
 
     fn reset(&mut self) {
+        self.alignment = self.original_alignment;
+        self.pad_size = self.original_pad_size;
         let center = self.global_center;
-        let frame = self.original_frame;
+        let frame = self.frame;
         self.rescale(frame, center, true);
     }
 }
@@ -730,7 +773,7 @@ impl Element for Pad {
 
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.rescale(frame, window_center, true);
-        self.update_original_frame();
+        self.update_original_pad_size();
     }
 
     fn get_min_size(&self) -> Vec2<i32> {

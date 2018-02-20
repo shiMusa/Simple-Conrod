@@ -670,16 +670,18 @@ impl Texture {
 
     pub fn get_cut(&self, w: u32,h: u32, img_w: u32, img_h: u32) -> Rect {
         //println!("get_cut() {} {} {} {}", w, h, img_w, img_h);
-        let mut tex_cut = match self.cut {
-            Some(c) => c,
-            None => Frame::new()
-        };
 
+        // TODO implement pre-defined texture cut //////////////////////////////////////////////////
+        //let mut tex_cut = match self.cut {
+        //    Some(c) => c,
+        //    None => Frame::new()
+        //};
+//
         let ratio = w as f64 / h as f64;
-        let (min, max) = if w > h {(h,w)} else {(w,h)};
-
-        let img_ratio = img_w as f64 / img_h as f64;
-        let (img_min, img_max) = if img_w > img_h {(img_h, img_w)} else {(img_w, img_h)};
+        //let (min, max) = if w > h {(h,w)} else {(w,h)};
+//
+        //let img_ratio = img_w as f64 / img_h as f64;
+        //let (img_min, img_max) = if img_w > img_h {(img_h, img_w)} else {(img_w, img_h)};
 
         match self.mode {
             TextureMode::FitHeight => {
@@ -763,11 +765,6 @@ pub trait Element {
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool);
-}
-
-
-pub trait Clickable {
-    fn with_action_click(self, fun: Box<Fn()>) -> Box<Self>;
 }
 
 pub trait Labelable {

@@ -29,22 +29,13 @@ d8888b. db       .d8b.  d8b   db d88888b
 */
 
 widget_ids!(
+    #[derive(Clone)]
     struct PlaneIds {
         plane,
     }
 );
 
-
-pub enum PlaneMode {
-    Stretch,
-    FitWidth,
-    FitHeight,
-    FitMin,
-    FitMax,
-    Tile,
-}
-
-
+#[derive(Clone)]
 pub struct Plane {
     ids: Option<PlaneIds>,
 
@@ -53,7 +44,6 @@ pub struct Plane {
     frame: Frame<i32>,
 
     graphic: Graphic,
-    mode: PlaneMode,
 }
 
 impl Plane {
@@ -66,7 +56,6 @@ impl Plane {
             frame: Frame::new(),
 
             graphic,
-            mode: PlaneMode::Stretch,
         })
     }
 
@@ -181,12 +170,14 @@ Y88888P YP   YP Y8888P' Y88888P Y88888P
 
 
 widget_ids!(
+    #[derive(Clone)]
     struct LabelIds {
         label,
         background,
     }
 );
 
+#[derive(Clone)]
 pub struct Label {
     text: String,
     font_size: u32,
@@ -349,6 +340,7 @@ Y8888P' ~Y8888P'    YP       YP     `Y88P'  VP   V8P
 
 
 widget_ids!(
+    #[derive(Clone)]
     struct ButtonIds {
         button,
     }
@@ -356,7 +348,7 @@ widget_ids!(
 
 
 
-
+#[derive(Clone)]
 pub struct Button {
     id: String,
     senders: Vec<Sender<ActionMsg>>,
@@ -368,7 +360,6 @@ pub struct Button {
     frame: Frame<i32>,
 
     button_ids: Option<ButtonIds>,
-    click_fn: Box<Fn()>,
     
     foreground: Graphic,
 
@@ -378,8 +369,6 @@ pub struct Button {
 
 impl Button {
     pub fn new() -> Box<Self> {
-        let fun = Box::new(||{});
-
         let button = Box::new(Button {
             id: "Button".to_string(),
             senders: Vec::new(),
@@ -389,7 +378,6 @@ impl Button {
             global_center: Vec2::zero(),
             frame: Frame::new(),
             button_ids: None,
-            click_fn: fun,
             foreground: Graphic::Color(conrod::color::LIGHT_GREY),
             label: None,
             font: None,
@@ -447,9 +435,6 @@ impl Button {
                         msg: ActionMsgData::Click,
                     });
                 }
-
-                // execute custom function
-                (self.click_fn)();
             }
         }
 
@@ -488,9 +473,6 @@ impl Button {
                         msg: ActionMsgData::Click,
                     });
                 }
-
-                // execute custom function
-                (self.click_fn)();
             }
         }
     }
@@ -537,14 +519,6 @@ impl Labelable for Button {
     }
     fn set_font(&mut self, font: String) {
         self.font = Some(font);
-    }
-}
-
-
-impl Clickable for Button {
-    fn with_action_click(mut self, fun: Box<Fn()>) -> Box<Self> {
-        self.click_fn = fun;
-        Box::new(self)
     }
 }
 
