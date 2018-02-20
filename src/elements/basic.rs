@@ -103,12 +103,12 @@ impl Plane {
     }
 }
 
-impl Foregroundable for Plane {
-    fn with_foreground(mut self, fg: Graphic) -> Box<Self> {
+impl Graphicable for Plane {
+    fn with_graphic(mut self, fg: Graphic) -> Box<Self> {
         self.graphic = fg;
         Box::new(self)
     }
-    fn set_foreground(&mut self, fg: Graphic) {
+    fn set_graphic(&mut self, fg: Graphic) {
         self.graphic = fg;
     }
 }
@@ -154,12 +154,12 @@ impl Element for Plane {
 
 
 /*
-db       .d8b.  d8888b. d88888b db
-88      d8' `8b 88  `8D 88'     88
-88      88ooo88 88oooY' 88ooooo 88
-88      88~~~88 88~~~b. 88~~~~~ 88
-88booo. 88   88 88   8D 88.     88booo.
-Y88888P YP   YP Y8888P' Y88888P Y88888P
+d888888b d88888b db    db d888888b
+`~~88~~' 88'     `8b  d8' `~~88~~'
+   88    88ooooo  `8bd8'     88
+   88    88~~~~~  .dPYb.     88
+   88    88.     .8P  Y8.    88
+   YP    Y88888P YP    YP    YP
 
 
 */
@@ -169,21 +169,20 @@ Y88888P YP   YP Y8888P' Y88888P Y88888P
 
 
 
+
 widget_ids!(
     #[derive(Clone)]
     struct LabelIds {
-        label,
-        background,
+        text,
     }
 );
 
 #[derive(Clone)]
-pub struct Label {
+pub struct Text {
     text: String,
     font_size: u32,
     font: Option<String>,
     color: conrod::Color,
-    background: Graphic,
 
     is_setup: bool,
     frame: Frame<i32>,
@@ -192,17 +191,16 @@ pub struct Label {
     label_ids: Option<LabelIds>,
 }
 
-impl Label {
+impl Text {
     pub fn new(text: String) -> Box<Self> {
-        Label::new_with_font_size(text, 12)
+        Text::new_with_font_size(text, 12)
     }
     pub fn new_with_font_size(text: String, font_size: u32) -> Box<Self> {
-        Box::new(Label {
+        Box::new(Text {
             text,
             font_size,
             font: None,
             color: conrod::color::BLACK,
-            background: Graphic::None,
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
@@ -211,7 +209,7 @@ impl Label {
     }
 }
 
-impl Element for Label {
+impl Element for Text {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         self.label_ids = Some(LabelIds::new(ui.widget_id_generator()));
         self.is_setup = true;
@@ -224,19 +222,6 @@ impl Element for Label {
 
         if let Some(ref ids) = self.label_ids {
             let c = self.frame.center() - self.global_center;
-
-            match self.background {
-                Graphic::None => (),
-                Graphic::Color(color) => {
-                    let mut rect = conrod::widget::Rectangle::fill_with(
-                        [self.frame.width() as f64, self.frame.height() as f64],
-                        color
-                    ).x_y(c.x as f64, c.y as f64);
-                    rect.set(ids.background, ui);
-                },
-                // TODO Background texture /////////////////////////////////////////
-                _ => (),
-            }
 
             let txt = self.text.to_owned();
             let mut label = widget::Text::new(&txt)
@@ -251,7 +236,7 @@ impl Element for Label {
                 }
             }
 
-            label.set(ids.label, ui);
+            label.set(ids.text, ui);
         }
     }
 
@@ -273,7 +258,7 @@ impl Element for Label {
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool){}
 }
 
-impl Labelable for Label {
+impl Labelable for Text {
     fn with_label(mut self, label: String) -> Box<Self> {
         self.text = label;
         Box::new(self)
@@ -291,23 +276,13 @@ impl Labelable for Label {
     }
 }
 
-impl Colorable for Label {
+impl Colorable for Text {
     fn with_color(mut self, color: conrod::Color) -> Box<Self> {
         self.color = color;
         Box::new(self)
     }
     fn set_color(&mut self, color: conrod::Color) {
         self.color = color;
-    }
-}
-
-impl Backgroundable for Label {
-    fn with_background(mut self, bg: Graphic) -> Box<Self> {
-        self.background = bg;
-        Box::new(self)
-    }
-    fn set_background(&mut self, bg: Graphic) {
-        self.background = bg;
     }
 }
 
@@ -494,12 +469,12 @@ impl Debug for Button {
     }
 }
 
-impl Foregroundable for Button {
-    fn with_foreground(mut self, fg: Graphic) -> Box<Self> {
+impl Graphicable for Button {
+    fn with_graphic(mut self, fg: Graphic) -> Box<Self> {
         self.foreground = fg;
         Box::new(self)
     }
-    fn set_foreground(&mut self, fg: Graphic) {
+    fn set_graphic(&mut self, fg: Graphic) {
         self.foreground = fg;
     }
 }

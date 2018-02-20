@@ -781,16 +781,10 @@ pub trait Colorable {
 }
 
 
-pub trait Foregroundable {
-    fn with_foreground(self, fg: Graphic) -> Box<Self>;
-    fn set_foreground(&mut self, fg: Graphic);
+pub trait Graphicable {
+    fn with_graphic(self, fg: Graphic) -> Box<Self>;
+    fn set_graphic(&mut self, fg: Graphic);
 }
-
-pub trait Backgroundable {
-    fn with_background(self, bg: Graphic) -> Box<Self>;
-    fn set_background(&mut self, bg: Graphic);
-}
-
 
 
 

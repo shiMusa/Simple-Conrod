@@ -181,7 +181,7 @@ pub fn expample2() {
 
 
     let pad = Pad::new(Button::new()
-        .with_foreground(Graphic::Texture(
+        .with_graphic(Graphic::Texture(
             Texture::new("RustLogo_hover".to_string())
             ))
         .with_label("Press".to_string())
@@ -266,7 +266,7 @@ pub fn example() {
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
             PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.5))
-        ).with_background(Graphic::Color(conrod::color::LIGHT_ORANGE))
+        )
     );
     sublist.push(
         Button::new()
@@ -291,12 +291,11 @@ pub fn example() {
         Button::new(),
         PadAlignment::TopLeft,
         PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
-        .with_background(Graphic::Color(conrod::color::LIGHT_BLUE))
     );
 
     inner_layer.push(
         Socket::new(
-            Label::new_with_font_size("Your Ads here!".to_string(), 60)
+            Text::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
 
@@ -323,8 +322,7 @@ pub fn example() {
                         let _ = list.pop();
                     },
                     ("Add", ActionMsgData::Click) => {
-                        list.push(Label::new_with_font_size("one more time!".to_string(), 42)
-                            .with_background(Graphic::Color(conrod::color::LIGHT_YELLOW)))
+                        list.push(Text::new_with_font_size("one more time!".to_string(), 42))
                     }
                     _ => ()
                 }
@@ -335,7 +333,7 @@ pub fn example() {
     layers.push(Pad::new(
         Button::new()
             .with_label("action".to_string())
-            .with_foreground(Graphic::Color(conrod::color::LIGHT_GREEN))
+            .with_graphic(Graphic::Color(conrod::color::LIGHT_GREEN))
             .with_id("Action".to_string())
             .with_sender(base_sender),
         PadAlignment::Center,

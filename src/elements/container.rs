@@ -132,6 +132,14 @@ impl Layers {
         }
         self.is_setup = false;
     }
+
+    pub fn pop(&mut self) -> Option<Box<Element>> {
+        self.layers.pop()
+    }
+
+    pub fn remove(&mut self, index: usize) -> Box<Element> {
+        self.layers.remove(index)
+    }
 }
 
 impl Element for Layers {
@@ -289,6 +297,13 @@ impl List {
     pub fn pop(&mut self) -> Option<Box<Element>> {
         let el = self.elements.pop();
         let _ = self.ring.pop();
+        self.rescale_elements();
+        el
+    }
+
+    pub fn remove(&mut self, index: usize) -> Box<Element> {
+        let el = self.elements.remove(index);
+        let _ = self.ring.remove(index);
         self.rescale_elements();
         el
     }
@@ -469,13 +484,6 @@ pub enum PadAlignment {
     XY(Dim, Dim),
 }
 
-widget_ids!(
-    struct PadIds {
-        background,
-    }
-);
-
-
 pub struct Pad {
     element: Box<Element>,
     pad_size: PadElementSize,
@@ -487,9 +495,6 @@ pub struct Pad {
 
     original_pad_size: PadElementSize,
     original_alignment: PadAlignment,
-
-    ids: Option<PadIds>,
-    background: Graphic,
 }
 
 
@@ -505,8 +510,6 @@ impl Pad {
             global_center: Vec2::zero(),
             original_pad_size: size,
             original_alignment: alignment,
-            ids: None,
-            background: Graphic::None,
         })
     }
 
@@ -720,19 +723,8 @@ impl Animateable for Pad {
 }
 
 
-impl Backgroundable for Pad {
-    fn with_background(mut self, bg: Graphic) -> Box<Self> {
-        self.background = bg;
-        Box::new(self)
-    }
-    fn set_background(&mut self, bg: Graphic) {
-        self.background = bg;
-    }
-}
-
 impl Element for Pad {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.ids = Some(PadIds::new(ui.widget_id_generator()));
         if !self.element.is_setup() { self.element.setup(ui); }
         self.is_setup = true;
     }
@@ -744,26 +736,7 @@ impl Element for Pad {
         self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
-        use conrod::{Widget, Positionable};
-
-        if let Some(ref ids) = self.ids {
-
-            let center = self.frame.center() - self.global_center;
-
-            match self.background {
-                Graphic::None => (),
-                Graphic::Color(color) => {
-                    let mut rect = conrod::widget::Rectangle::fill_with(
-                        [self.frame.width() as f64, self.frame.height() as f64],
-                        color
-                    ).x_y(center.x as f64, center.y as f64);
-                    rect.set(ids.background, ui);
-                },
-                // TODO Background texture ///////////////////////////////////////
-                _ => (),
-            }
-            self.element.build_window(ui, ressources);
-        }
+        self.element.build_window(ui, ressources);
         if DEBUG { println!("Pad build.");}
     }
 
