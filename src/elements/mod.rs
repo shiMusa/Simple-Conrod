@@ -12,6 +12,11 @@ use num::{Num, NumCast};
 use std::ops::{Add, Sub, Mul, Div};
 use std::fmt::{Debug, Formatter, Result};
 use std::sync::mpsc::{self, Sender, Receiver};
+use std::collections::HashMap;
+use std::path::Path;
+
+use find_folder;
+use image;
 
 
 
@@ -619,7 +624,7 @@ pub trait Element {
     fn is_setup(&self) -> bool;
 
     fn stop(&mut self) {}
-    fn build_window(&self, ui: &mut conrod::UiCell);
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources);
 
     fn get_frame(&self) -> Frame<i32>;
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>);
@@ -642,6 +647,9 @@ pub trait Clickable {
 pub trait Labelable {
     fn with_label(self, label: String) -> Box<Self>;
     fn set_label(&mut self, label: String);
+
+    fn with_font(self, font: String) -> Box<Self>;
+    fn set_font(&mut self, font: String);
 }
 
 pub trait Colorable {
@@ -650,18 +658,22 @@ pub trait Colorable {
 }
 
 
-pub enum Background {
-    None,
+#[derive(Debug, Clone)]
+pub enum Graphic {
     Color(conrod::Color),
+    Texture(String),
+    None,
+}
+
+pub trait Foregroundable {
+    fn with_foreground(self, fg: Graphic) -> Box<Self>;
+    fn set_foreground(&mut self, fg: Graphic);
 }
 
 pub trait Backgroundable {
-    fn with_background(self, bg: Background) -> Box<Self>;
-    fn set_background(&mut self, bg: Background);
+    fn with_background(self, bg: Graphic) -> Box<Self>;
+    fn set_background(&mut self, bg: Graphic);
 }
-
-
-
 
 
 
@@ -693,14 +705,68 @@ Y8   I8I   88    88    88 V8o88 88   88 88    88 Y8   I8I   88
 
 */
 
+pub struct WindowRessources {
+    fonts: HashMap<String, conrod::text::font::Id>,
+    image_map: conrod::image::Map<glium::texture::Texture2d>,
+    images: HashMap<String, conrod::image::Id>
+}
+impl WindowRessources {
+    pub fn new() -> Self {
+        WindowRessources {
+            fonts: HashMap::new(),
+            image_map: conrod::image::Map::new(),
+            images: HashMap::new(),
+        }
+    }
 
+    pub fn add_font(&mut self,  ui: &mut conrod::Ui, id: String, path: &Path) {
+        self.fonts.insert(
+            id,
+            ui.fonts.insert_from_file(path).unwrap()
+        );
+        println!("font loaded into windowressource.");
+        println!("self.fonts {:?}", self.fonts);
+    }
+
+    pub fn font(&self, id: &String) -> Option<&conrod::text::font::Id> {
+        self.fonts.get(id)
+    }
+
+    pub fn image(&self, id: &String) -> Option<&conrod::image::Id> {
+        self.images.get(id)
+    }
+
+    pub fn add_image(&mut self, display: &glium::Display, id: String, path: &Path) {
+        self.images.insert(
+            id,
+            self.image_map.insert(
+                Self::load_image(display, path)
+            )
+        );
+        println!("image loaded into windowressource.");
+        println!("self.images {:?}", self.images);
+    }
+
+    // ? from conrod-example "image_button.rs"
+    // Load an image from our assets folder as a texture we can draw to the screen.
+    fn load_image<P>(display: &glium::Display, path: P) -> glium::texture::Texture2d
+        where P: AsRef<Path>,
+    {
+        let path = path.as_ref();
+        let rgba_image = image::open(&Path::new(&path)).unwrap().to_rgba();
+        let image_dimensions = rgba_image.dimensions();
+        let raw_image = glium::texture::RawImage2d::from_raw_rgba_reversed(&rgba_image.into_raw(), image_dimensions);
+        let texture = glium::texture::Texture2d::new(display, raw_image).unwrap();
+        texture
+    }
+}
 
 
 pub struct Window {
     events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
     renderer: conrod::backend::glium::Renderer,
-    image_map: conrod::image::Map<glium::texture::Texture2d>,
+    //image_map: conrod::image::Map<glium::texture::Texture2d>,
     ui: conrod::Ui,
 
     element: Option<Box<Element>>,
@@ -708,15 +774,40 @@ pub struct Window {
     senders: Vec<Sender<ActionMsg>>,
 
     selfsender: Sender<ActionMsg>,
+
+    ressources: WindowRessources,
 }
 
 impl Window {
 
     fn setup(&mut self) {
+        println!("setup(): starting...");
         if let Some(ref mut el) = self.element {
             el.setup(&mut self.ui);
+            println!("setup(): element setup.");
         }
+        println!("setup(): done.");
     }
+
+
+
+    pub fn add_font(&mut self, id: String, path: &Path) {
+        self.ressources.add_font(
+            &mut self.ui,
+            id, 
+            path
+        );
+    }
+
+    pub fn add_image(&mut self, id: String, path: &Path) {
+        self.ressources.add_image(
+            &mut self.display, 
+            id, 
+            path
+        );
+    }
+
+
 
 
     pub fn add_element(&mut self, element: Box<Element>) {
@@ -753,17 +844,31 @@ impl Window {
         ).build();
 
 
+        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+        let mut ressources = WindowRessources::new();
+        ressources.add_font(
+            &mut ui,
+            "NotoSans-Regular".to_string(), 
+            &assets.join("fonts/NotoSans/NotoSans-Regular.ttf")
+        );
+
+        // Add a `Font` to the `Ui`'s `font::Map` from file.
+        //let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+        //let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
+        //ui.fonts.insert_from_file(font_path).unwrap();
+
         // Add a font to the ui's font::map from file
-        const FONT_PATH: &'static str =
+        /*const FONT_PATH: &'static str =
             concat!(env!("CARGO_MANIFEST_DIR"),
                 "\\assets\\fonts\\NotoSans\\NotoSans-Regular.ttf");
-        ui.fonts.insert_from_file(FONT_PATH).unwrap();
+        ui.fonts.insert_from_file(FONT_PATH).unwrap();*/
 
         // connect conrod::render::Primitives to glium Surface
         let renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
 
         // image mapping, here: none
-        let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
+        //let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
         let (selfsender, selfreceiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
             = mpsc::channel();
@@ -773,12 +878,13 @@ impl Window {
             events_loop,
             display,
             renderer,
-            image_map,
+            //image_map,
             ui,
             element: None,
             receivers: vec![selfreceiver],
             senders: Vec::new(),
-            selfsender
+            selfsender,
+            ressources
         }
     }
 
@@ -789,6 +895,8 @@ impl Window {
     pub fn run_with_fps(&mut self, fps: f64) {
 
         self.setup();
+
+        println!("run(): window setup.");
 
         let dt_ns = (1.0e9/fps) as u64;
 
@@ -937,19 +1045,27 @@ impl Window {
 
             if update {
                 let ui = &mut self.ui.set_widgets();
+                let res = &self.ressources;
+                if DEBUG { println!("run() start building...");}
                 if let Some(ref mut el) = self.element {
                     //el.set_frame(window_frame, window_frame.center());
-                    el.build_window(ui);
+                    el.build_window(ui, res);
+                    if DEBUG { println!("run() element build...");}
                 }
+                if DEBUG { println!("run() all elements build.");}
             }
 
             // draw ui if changed
             if let Some(primitives) = self.ui.draw_if_changed() {
-                self.renderer.fill(&self.display, primitives, &self.image_map);
+                if DEBUG { println!("run() preparing target for drawing...");}
+                self.renderer.fill(&self.display, primitives, &self.ressources.image_map);
                 let mut target = self.display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
-                self.renderer.draw(&self.display, &mut target, &self.image_map).unwrap();
+
+                if DEBUG { println!("run() drawing..."); }
+                self.renderer.draw(&self.display, &mut target, &self.ressources.image_map).unwrap();
                 target.finish().unwrap();
+                if DEBUG { println!("run() loop finished."); }
             }
         }
 

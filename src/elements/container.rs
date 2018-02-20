@@ -66,7 +66,7 @@ impl Element for Empty {
     fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
     fn is_setup(&self) -> bool { self.is_setup }
 
-    fn build_window(&self, _ui: &mut conrod::UiCell) {}
+    fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 
     fn get_frame(&self) -> Frame<i32> { self.frame }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
@@ -157,9 +157,9 @@ impl Element for Layers {
             el.stop();
         }
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         for n in 0..self.layers.len() {
-            self.layers[n].build_window(ui,);
+            self.layers[n].build_window(ui, ressources);
         }
     }
 
@@ -349,9 +349,9 @@ impl Element for List {
             el.stop();
         }
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         for el in &self.elements {
-            el.build_window(ui);
+            el.build_window(ui, ressources);
         }
     }
 
@@ -486,7 +486,7 @@ pub struct Pad {
     original_frame: Frame<i32>,
 
     ids: Option<PadIds>,
-    background: Background,
+    background: Graphic,
 }
 
 
@@ -501,7 +501,7 @@ impl Pad {
             global_center: Vec2::zero(),
             original_frame: Frame::new(),
             ids: None,
-            background: Background::None,
+            background: Graphic::None,
         })
     }
 
@@ -678,11 +678,11 @@ impl Animateable for Pad {
 
 
 impl Backgroundable for Pad {
-    fn with_background(mut self, bg: Background) -> Box<Self> {
+    fn with_background(mut self, bg: Graphic) -> Box<Self> {
         self.background = bg;
         Box::new(self)
     }
-    fn set_background(&mut self, bg: Background) {
+    fn set_background(&mut self, bg: Graphic) {
         self.background = bg;
     }
 }
@@ -700,7 +700,7 @@ impl Element for Pad {
     fn stop(&mut self) {
         self.element.stop();
     }
-    fn build_window(&self, ui: &mut conrod::UiCell) {
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{Widget, Positionable};
 
         if let Some(ref ids) = self.ids {
@@ -708,17 +708,20 @@ impl Element for Pad {
             let center = self.frame.center() - self.global_center;
 
             match self.background {
-                Background::None => (),
-                Background::Color(color) => {
+                Graphic::None => (),
+                Graphic::Color(color) => {
                     let mut rect = conrod::widget::Rectangle::fill_with(
                         [self.frame.width() as f64, self.frame.height() as f64],
                         color
                     ).x_y(center.x as f64, center.y as f64);
                     rect.set(ids.background, ui);
-                }
+                },
+                // TODO Background texture ///////////////////////////////////////
+                _ => (),
             }
-            self.element.build_window(ui);
+            self.element.build_window(ui, ressources);
         }
+        if DEBUG { println!("Pad build.");}
     }
 
     fn get_frame(&self) -> Frame<i32> {

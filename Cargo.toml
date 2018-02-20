@@ -7,6 +7,8 @@ authors = ["shiMusa <fehsef@gmail.com>"]
 conrod = {git = "https://github.com/PistonDevelopers/conrod.git", features=["winit", "glium"]}
 time = "*"
 num = "*"
+find_folder = "*"
+image = "*"
 
 [lib]
 name = "sabi"
