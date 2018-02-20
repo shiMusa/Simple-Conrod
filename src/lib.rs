@@ -139,8 +139,45 @@ pub fn expample2() {
     let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
 
     // construct window
+    let mut window = Window::new("Animation Test".to_string(), 800,800);
+    window.add_receiver(receiver);
+    window.add_sender(timer_sender);
+
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    window.add_font(
+        "NotoSans-Italic".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+    );
+    window.add_font(
+        "NotoSans-Bold".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Bold.ttf")
+    );
+    window.add_font(
+        "NotoSans-BoldItalic".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-BoldItalic.ttf")
+    );
+
+    window.add_image(
+        "RustLogo_hover".to_string(),
+        &assets.join("images/rust_hover.png")
+    );
+
+    window.add_image(
+        "JapaneseFan".to_string(),
+        &assets.join("images/japanese-fan.png")
+    );
+
+    // add elements to window
+
+    let mut layers = Layers::new();
+
+    layers.push(Plane::new(Graphic::Texture("JapaneseFan".to_string())));
+
+
 
     let pad = Pad::new(Button::new()
+        .with_foreground(Graphic::Texture("RustLogo_hover".to_string()))
         .with_label("Press".to_string())
         .with_id("testbutton".to_string())
         .with_sender(sender.clone())
@@ -148,7 +185,6 @@ pub fn expample2() {
         PadAlignment::Center,
         PadElementSize::Positive(Dim::Relative(0.5),Dim::Relative(0.5))
     );
-
 
     #[allow(unused_doc_comment)]
     /** first the long animations, then the short ones.
@@ -171,26 +207,27 @@ pub fn expample2() {
                 },
                 _ => ()
             }
-        }));
-
-
-    let mut window = Window::new("Animation Test".to_string(), 800,800);
-    window.add_receiver(receiver);
-    window.add_sender(timer_sender);
-
-    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-
-    window.add_font(
-        "NotoSans-Italic".to_string(),
-        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+        })
     );
 
-    window.add_element(socket);
+    layers.push(socket);
+
+    window.add_element(layers);
     window.run();
 }
 
 
 
+/*
+d88888b db    db
+88'     `8b  d8'
+88ooooo  `8bd8'
+88~~~~~  .dPYb.
+88.     .8P  Y8.
+Y88888P YP    YP
+
+
+*/
 
 
 pub fn example() {
@@ -230,7 +267,7 @@ pub fn example() {
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
             PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.5))
-        ).with_background(Background::Color(conrod::color::LIGHT_ORANGE))
+        ).with_background(Graphic::Color(conrod::color::LIGHT_ORANGE))
     );
     sublist.push(
         Button::new()
@@ -264,7 +301,7 @@ pub fn example() {
             })),
         PadAlignment::TopLeft,
         PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
-        .with_background(Background::Color(conrod::color::LIGHT_BLUE))
+        .with_background(Graphic::Color(conrod::color::LIGHT_BLUE))
     );
 
     inner_layer.push(
@@ -297,7 +334,7 @@ pub fn example() {
                     },
                     ("Add", ActionMsgData::Click) => {
                         list.push(Label::new_with_font_size("one more time!".to_string(), 42)
-                            .with_background(Background::Color(conrod::color::LIGHT_YELLOW)))
+                            .with_background(Graphic::Color(conrod::color::LIGHT_YELLOW)))
                     }
                     _ => ()
                 }
@@ -311,7 +348,7 @@ pub fn example() {
             .with_action_click(Box::new(||{
                 println!("Äktschöööööön!!!!");
             }))
-            .with_color(conrod::color::LIGHT_GREEN)
+            .with_foreground(Graphic::Color(conrod::color::LIGHT_GREEN))
             .with_id("Action".to_string())
             .with_sender(base_sender),
         PadAlignment::Center,

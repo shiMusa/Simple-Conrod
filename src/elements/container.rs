@@ -486,7 +486,7 @@ pub struct Pad {
     original_frame: Frame<i32>,
 
     ids: Option<PadIds>,
-    background: Background,
+    background: Graphic,
 }
 
 
@@ -501,7 +501,7 @@ impl Pad {
             global_center: Vec2::zero(),
             original_frame: Frame::new(),
             ids: None,
-            background: Background::None,
+            background: Graphic::None,
         })
     }
 
@@ -678,11 +678,11 @@ impl Animateable for Pad {
 
 
 impl Backgroundable for Pad {
-    fn with_background(mut self, bg: Background) -> Box<Self> {
+    fn with_background(mut self, bg: Graphic) -> Box<Self> {
         self.background = bg;
         Box::new(self)
     }
-    fn set_background(&mut self, bg: Background) {
+    fn set_background(&mut self, bg: Graphic) {
         self.background = bg;
     }
 }
@@ -708,17 +708,20 @@ impl Element for Pad {
             let center = self.frame.center() - self.global_center;
 
             match self.background {
-                Background::None => (),
-                Background::Color(color) => {
+                Graphic::None => (),
+                Graphic::Color(color) => {
                     let mut rect = conrod::widget::Rectangle::fill_with(
                         [self.frame.width() as f64, self.frame.height() as f64],
                         color
                     ).x_y(center.x as f64, center.y as f64);
                     rect.set(ids.background, ui);
-                }
+                },
+                // TODO Background texture ///////////////////////////////////////
+                _ => (),
             }
             self.element.build_window(ui, ressources);
         }
+        if DEBUG { println!("Pad build.");}
     }
 
     fn get_frame(&self) -> Frame<i32> {
