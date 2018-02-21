@@ -29,25 +29,29 @@ d8888b. db       .d8b.  d8b   db d88888b
 */
 
 widget_ids!(
+    #[derive(Clone)]
     struct PlaneIds {
         plane,
     }
 );
 
+#[derive(Clone)]
 pub struct Plane {
     ids: Option<PlaneIds>,
+    parent: Option<conrod::widget::id::Id>,
 
     is_setup: bool,
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
-    graphic: Graphic
+    graphic: Graphic,
 }
 
 impl Plane {
     pub fn new(graphic: Graphic) -> Box<Self> {
         Box::new(Plane {
             ids: None,
+            parent: None,
 
             is_setup: false,
             global_center: Vec2::zero(),
@@ -57,14 +61,23 @@ impl Plane {
         })
     }
 
-    fn build_textured(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources, texture: conrod::image::Id) {
+    fn build_textured(
+        &self, 
+        _ui: &mut conrod::UiCell, 
+        _ressources: &WindowRessources, 
+        texture: (u32,u32,conrod::image::Id),
+        texture_properties: &Texture
+    ) {
         use conrod::{Widget, widget, Positionable, Sizeable};
 
         if DEBUG { println!("building textured plane with image id {:?}", texture);}
         let c = self.frame.center()-self.global_center;
 
         if DEBUG { println!("creating plane image...");}
-        let img = widget::primitive::image::Image::new(texture)
+        let img = widget::primitive::image::Image::new(texture.2)
+            .source_rectangle(texture_properties.get_cut(
+                self.frame.width() as u32, self.frame.height() as u32, texture.0, texture.1
+            ))
             .x_y(c.x as f64, c.y as f64)
             .w_h(self.frame.width() as f64,self.frame.height() as f64);
         if let Some(ref ids) = self.ids {
@@ -92,12 +105,12 @@ impl Plane {
     }
 }
 
-impl Foregroundable for Plane {
-    fn with_foreground(mut self, fg: Graphic) -> Box<Self> {
+impl Graphicable for Plane {
+    fn with_graphic(mut self, fg: Graphic) -> Box<Self> {
         self.graphic = fg;
         Box::new(self)
     }
-    fn set_foreground(&mut self, fg: Graphic) {
+    fn set_graphic(&mut self, fg: Graphic) {
         self.graphic = fg;
     }
 }
@@ -109,11 +122,15 @@ impl Element for Plane {
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.graphic {
             Graphic::Texture(ref texture) => {
-                if let Some(tex) = ressources.image(texture) {
-                    self.build_textured(ui, ressources, *tex);
+                if let Some(tex) = ressources.image(&texture.get_id()) {
+                    self.build_textured(ui, ressources, *tex, &texture);
                     return;
                 };
             },
@@ -143,12 +160,12 @@ impl Element for Plane {
 
 
 /*
-db       .d8b.  d8888b. d88888b db
-88      d8' `8b 88  `8D 88'     88
-88      88ooo88 88oooY' 88ooooo 88
-88      88~~~88 88~~~b. 88~~~~~ 88
-88booo. 88   88 88   8D 88.     88booo.
-Y88888P YP   YP Y8888P' Y88888P Y88888P
+d888888b d88888b db    db d888888b
+`~~88~~' 88'     `8b  d8' `~~88~~'
+   88    88ooooo  `8bd8'     88
+   88    88~~~~~  .dPYb.     88
+   88    88.     .8P  Y8.    88
+   YP    Y88888P YP    YP    YP
 
 
 */
@@ -158,72 +175,66 @@ Y88888P YP   YP Y8888P' Y88888P Y88888P
 
 
 
+
 widget_ids!(
+    #[derive(Clone)]
     struct LabelIds {
-        label,
-        background,
+        text,
     }
 );
 
-pub struct Label {
+#[derive(Clone)]
+pub struct Text {
     text: String,
     font_size: u32,
     font: Option<String>,
     color: conrod::Color,
-    background: Graphic,
 
     is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
-    label_ids: Option<LabelIds>,
+
+    ids: Option<LabelIds>,
+    parent: Option<conrod::widget::id::Id>
 }
 
-impl Label {
+impl Text {
     pub fn new(text: String) -> Box<Self> {
-        Label::new_with_font_size(text, 12)
+        Text::new_with_font_size(text, 12)
     }
     pub fn new_with_font_size(text: String, font_size: u32) -> Box<Self> {
-        Box::new(Label {
+        Box::new(Text {
             text,
             font_size,
             font: None,
             color: conrod::color::BLACK,
-            background: Graphic::None,
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
-            label_ids: None,
+            ids: None,
+            parent: None,
         })
     }
 }
 
-impl Element for Label {
+impl Element for Text {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.label_ids = Some(LabelIds::new(ui.widget_id_generator()));
+        self.ids = Some(LabelIds::new(ui.widget_id_generator()));
         self.is_setup = true;
         if DEBUG { println!("Label --- setup()"); }
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{widget, Positionable, Colorable, Widget};
 
-        if let Some(ref ids) = self.label_ids {
+        if let Some(ref ids) = self.ids {
             let c = self.frame.center() - self.global_center;
-
-            match self.background {
-                Graphic::None => (),
-                Graphic::Color(color) => {
-                    let mut rect = conrod::widget::Rectangle::fill_with(
-                        [self.frame.width() as f64, self.frame.height() as f64],
-                        color
-                    ).x_y(c.x as f64, c.y as f64);
-                    rect.set(ids.background, ui);
-                },
-                // TODO Background texture /////////////////////////////////////////
-                _ => (),
-            }
 
             let txt = self.text.to_owned();
             let mut label = widget::Text::new(&txt)
@@ -238,7 +249,7 @@ impl Element for Label {
                 }
             }
 
-            label.set(ids.label, ui);
+            label.set(ids.text, ui);
         }
     }
 
@@ -260,7 +271,7 @@ impl Element for Label {
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool){}
 }
 
-impl Labelable for Label {
+impl Labelable for Text {
     fn with_label(mut self, label: String) -> Box<Self> {
         self.text = label;
         Box::new(self)
@@ -278,23 +289,13 @@ impl Labelable for Label {
     }
 }
 
-impl Colorable for Label {
+impl Colorable for Text {
     fn with_color(mut self, color: conrod::Color) -> Box<Self> {
         self.color = color;
         Box::new(self)
     }
     fn set_color(&mut self, color: conrod::Color) {
         self.color = color;
-    }
-}
-
-impl Backgroundable for Label {
-    fn with_background(mut self, bg: Graphic) -> Box<Self> {
-        self.background = bg;
-        Box::new(self)
-    }
-    fn set_background(&mut self, bg: Graphic) {
-        self.background = bg;
     }
 }
 
@@ -327,6 +328,7 @@ Y8888P' ~Y8888P'    YP       YP     `Y88P'  VP   V8P
 
 
 widget_ids!(
+    #[derive(Clone)]
     struct ButtonIds {
         button,
     }
@@ -334,7 +336,7 @@ widget_ids!(
 
 
 
-
+#[derive(Clone)]
 pub struct Button {
     id: String,
     senders: Vec<Sender<ActionMsg>>,
@@ -346,7 +348,7 @@ pub struct Button {
     frame: Frame<i32>,
 
     button_ids: Option<ButtonIds>,
-    click_fn: Box<Fn()>,
+    parent: Option<conrod::widget::id::Id>,
     
     foreground: Graphic,
 
@@ -356,8 +358,6 @@ pub struct Button {
 
 impl Button {
     pub fn new() -> Box<Self> {
-        let fun = Box::new(||{});
-
         let button = Box::new(Button {
             id: "Button".to_string(),
             senders: Vec::new(),
@@ -367,7 +367,7 @@ impl Button {
             global_center: Vec2::zero(),
             frame: Frame::new(),
             button_ids: None,
-            click_fn: fun,
+            parent: None,
             foreground: Graphic::Color(conrod::color::LIGHT_GREY),
             label: None,
             font: None,
@@ -379,7 +379,14 @@ impl Button {
 
 
 
-    fn build_textured(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources, texture: conrod::image::Id) {
+    fn build_textured(
+        &self, 
+        ui: &mut conrod::UiCell, 
+        ressources: &WindowRessources, 
+        texture: (u32,u32,conrod::image::Id),
+        // TODO implement texture cut and scaling for button ////////////////////////////////////////
+        _texture_properties: &Texture
+    ) {
         use conrod::{widget, Positionable, Widget, Sizeable, Labelable, Borderable};
 
         if DEBUG { println!("building textured button with image id {:?}", texture);}
@@ -388,7 +395,7 @@ impl Button {
             let c = self.frame.center()-self.global_center;
 
             if DEBUG { println!("creating button...");}
-            let mut button = widget::Button::image(texture)
+            let mut button = widget::Button::image(texture.2)
                 .x_y(c.x as f64, c.y as f64)
                 .w_h(self.frame.width() as f64,self.frame.height() as f64)
                 .border(0f64);
@@ -418,9 +425,6 @@ impl Button {
                         msg: ActionMsgData::Click,
                     });
                 }
-
-                // execute custom function
-                (self.click_fn)();
             }
         }
 
@@ -459,9 +463,6 @@ impl Button {
                         msg: ActionMsgData::Click,
                     });
                 }
-
-                // execute custom function
-                (self.click_fn)();
             }
         }
     }
@@ -483,12 +484,12 @@ impl Debug for Button {
     }
 }
 
-impl Foregroundable for Button {
-    fn with_foreground(mut self, fg: Graphic) -> Box<Self> {
+impl Graphicable for Button {
+    fn with_graphic(mut self, fg: Graphic) -> Box<Self> {
         self.foreground = fg;
         Box::new(self)
     }
-    fn set_foreground(&mut self, fg: Graphic) {
+    fn set_graphic(&mut self, fg: Graphic) {
         self.foreground = fg;
     }
 }
@@ -508,14 +509,6 @@ impl Labelable for Button {
     }
     fn set_font(&mut self, font: String) {
         self.font = Some(font);
-    }
-}
-
-
-impl Clickable for Button {
-    fn with_action_click(mut self, fun: Box<Fn()>) -> Box<Self> {
-        self.click_fn = fun;
-        Box::new(self)
     }
 }
 
@@ -540,11 +533,15 @@ impl Element for Button {
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.foreground {
             Graphic::Texture(ref texture) => {
-                if let Some(tex) = ressources.image(texture) {
-                    self.build_textured(ui, ressources, *tex);
+                if let Some(tex) = ressources.image(&texture.get_id()) {
+                    self.build_textured(ui, ressources, *tex, &texture);
                     return;
                 };
             },

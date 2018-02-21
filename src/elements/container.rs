@@ -49,6 +49,7 @@ Y88888P YP  YP  YP 88         YP       YP
 
 
 pub struct Empty {
+    parent: Option<conrod::widget::id::Id>,
     is_setup: bool,
     frame: Frame<i32>,
     window_center: Vec2<i32>
@@ -56,6 +57,7 @@ pub struct Empty {
 impl Empty {
     pub fn new() -> Box<Self> {
         Box::new(Empty{
+            parent: None,
             is_setup: false,
             frame: Frame::new(),
             window_center: Vec2::zero()
@@ -65,6 +67,10 @@ impl Empty {
 impl Element for Empty {
     fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
     fn is_setup(&self) -> bool { self.is_setup }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
 
     fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 
@@ -101,9 +107,15 @@ Y88888P YP   YP    YP    Y88888P 88   YD `8888Y'
 
 */
 
-
+widget_ids!(
+    struct LayersIds {
+        layers
+    }
+);
 
 pub struct Layers {
+    parent: Option<conrod::widget::id::Id>,
+    ids: Option<LayersIds>,
     layers: Vec<Box<Element>>,
 
     is_setup: bool,
@@ -113,6 +125,8 @@ pub struct Layers {
 impl Layers {
     pub fn new() -> Box<Self> {
         Box::new(Layers {
+            parent: None,
+            ids: None,
             layers: Vec::new(),
             is_setup: false,
             frame: Frame::new()
@@ -132,15 +146,26 @@ impl Layers {
         }
         self.is_setup = false;
     }
+
+    pub fn pop(&mut self) -> Option<Box<Element>> {
+        self.layers.pop()
+    }
+
+    pub fn remove(&mut self, index: usize) -> Box<Element> {
+        self.layers.remove(index)
+    }
 }
 
 impl Element for Layers {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = LayersIds::new(ui.widget_id_generator());
         for el in &mut self.layers {
             if !el.is_setup() {
+                el.set_parent_widget(ids.layers);
                 el.setup(ui);
             }
         }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
@@ -150,6 +175,10 @@ impl Element for Layers {
         }
         if DEBUG { println!("is layers setup? {}",setup); }
         setup
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {
@@ -232,6 +261,12 @@ Y88888P Y888888P `8888Y'    YP
 */
 
 
+widget_ids!(
+    struct ListIds {
+        list
+    }
+);
+
 
 pub enum ListAlignment {
     Horizontal,
@@ -245,6 +280,9 @@ pub enum ListElementSize {
 
 
 pub struct List {
+    ids: Option<ListIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     elements: Vec<Box<Element>>,
     ring: Ring<i32>,
     alignment: ListAlignment,
@@ -257,6 +295,8 @@ pub struct List {
 impl List {
     pub fn new(alignment: ListAlignment) -> Box<Self> {
         Box::new(List {
+            ids: None,
+            parent: None,
             elements: Vec::new(),
             ring: Ring::new(),
             alignment,
@@ -289,6 +329,13 @@ impl List {
     pub fn pop(&mut self) -> Option<Box<Element>> {
         let el = self.elements.pop();
         let _ = self.ring.pop();
+        self.rescale_elements();
+        el
+    }
+
+    pub fn remove(&mut self, index: usize) -> Box<Element> {
+        let el = self.elements.remove(index);
+        let _ = self.ring.remove(index);
         self.rescale_elements();
         el
     }
@@ -330,9 +377,14 @@ impl List {
 
 impl Element for List {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = ListIds::new(ui.widget_id_generator());
         for el in &mut self.elements {
-            if !el.is_setup() { el.setup(ui); }
+            if !el.is_setup() { 
+                el.set_parent_widget(ids.list);
+                el.setup(ui); 
+            }
         }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
@@ -342,6 +394,10 @@ impl Element for List {
         }
         if DEBUG { println!("List is setup? {}", setup); }
         setup
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {
@@ -448,13 +504,20 @@ d8888b.  .d8b.  d8888b.
 
 */
 
+widget_ids!(
+    struct PadIds {
+        pad
+    }
+);
 
 
+#[derive(Debug, Copy, Clone)]
 pub enum PadElementSize {
     Positive(Dim, Dim),
     Negative(Dim, Dim),
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum PadAlignment {
     Center,
     TopLeft,
@@ -465,16 +528,13 @@ pub enum PadAlignment {
     Bottom,
     BottomLeft,
     Left,
+    XY(Dim, Dim),
 }
 
-widget_ids!(
-    struct PadIds {
-        background,
-    }
-);
-
-
 pub struct Pad {
+    ids: Option<PadIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     element: Box<Element>,
     pad_size: PadElementSize,
     alignment: PadAlignment,
@@ -483,31 +543,32 @@ pub struct Pad {
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
-    original_frame: Frame<i32>,
-
-    ids: Option<PadIds>,
-    background: Graphic,
+    original_pad_size: PadElementSize,
+    original_alignment: PadAlignment,
 }
 
 
 impl Pad {
     pub fn new(element: Box<Element>, alignment: PadAlignment, size: PadElementSize) -> Box<Self> {
+        //println!("Pad with size {:?}", size);
         Box::new(Pad {
+            ids: None,
+            parent: None,
             element,
             alignment,
             pad_size: size,
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
-            original_frame: Frame::new(),
-            ids: None,
-            background: Graphic::None,
+            original_pad_size: size,
+            original_alignment: alignment,
         })
     }
 
 
-    fn update_original_frame(&mut self) {
-        self.original_frame = self.frame;
+    fn update_original_pad_size(&mut self) {
+        self.original_pad_size = self.pad_size;
+        self.original_alignment = self.alignment;
     }
 
     fn rescale(&mut self, frame: Frame<i32>, window_center: Vec2<i32>, limit: bool) {
@@ -551,6 +612,8 @@ impl Pad {
         }
 
         let center = self.frame.center();
+        let w = self.frame.width();
+        let h = self.frame.height();
 
         let frame: Frame<i32> = match self.alignment {
             Center => {
@@ -610,6 +673,21 @@ impl Pad {
                     p0: Vec2{x: self.frame.p0.x, y: midy - v.y/2},
                     p1: Vec2{x: self.frame.p0.x + v.x, y: midy + v.y/2}
                 }
+            },
+            XY(ax,ay) => {
+                let xx = match ax {
+                    Dim::Absolute(ix) => ix,
+                    Dim::Relative(fx) => (fx * w as f64/2.0) as i32,
+                };
+                let yy = match ay {
+                    Dim::Absolute(iy) => iy,
+                    Dim::Relative(fy) => (fy * h as f64/2.0) as i32,
+                };
+                let vv = Vec2{x: xx, y: yy};
+                Frame {
+                    p0: center - v/2 + vv,
+                    p1: center + v/2 + vv,
+                }
             }
         };
 
@@ -618,27 +696,61 @@ impl Pad {
 }
 
 
+// ! ////////////////////////////////////////////////////////////////////////////////////////
+// ! need to change pad_size, not frame!!! //////////////////////////////////////////////////
+// ! ////////////////////////////////////////////////////////////////////////////////////////
 impl Animateable for Pad {
     fn animate_size(&mut self, xy: (Dim,Dim)) {
-        let (x,y) = xy;
 
-        let c = self.frame.center();
-        let w = self.original_frame.width();
-        let h = self.original_frame.height();
+        let frame = self.frame;
+        let w = frame.width();
+        let h = frame.height();
 
-        let nx = match x {
-            Dim::Absolute(ix) => w/2 + ix,
-            Dim::Relative(fx) => (w as f64 / 2.0 * fx) as i32
-        };
-        let ny = match y {
-            Dim::Absolute(iy) => h/2 + iy,
-            Dim::Relative(fy) => (h as f64 / 2.0 * fy) as i32
+        //println!("w {}, h {}",w,h);
+        //println!("self.pad_size {:?}", self.pad_size);
+
+        let (px,py) = match self.original_pad_size {
+            PadElementSize::Positive(dx,dy) => {
+                let xx = match dx {
+                    Dim::Absolute(ix) => ix as f64,
+                    Dim::Relative(fx) => fx * w as f64
+                };
+                let yy = match dy {
+                    Dim::Absolute(iy) => iy as f64,
+                    Dim::Relative(iy) => iy * h as f64
+                };
+                (xx,yy)
+            },
+            PadElementSize::Negative(dx,dy) => {
+                let xx = match dx {
+                    Dim::Absolute(ix) => w as f64 - ix as f64,
+                    Dim::Relative(fx) => w as f64 - fx * w as f64
+                };
+                let yy = match dy {
+                    Dim::Absolute(iy) => h as f64 - iy as f64,
+                    Dim::Relative(fy) => h as f64 - fy * h as f64
+                };
+                (xx,yy)
+            }
         };
 
-        let frame = Frame {
-            p0: Vec2{ x: c.x-nx, y: c.y-ny},
-            p1: Vec2{ x: c.x+nx, y: c.y+ny}
+        let (x,y) = {
+            let xx = match xy.0 {
+                Dim::Absolute(ix) => ix as f64,
+                Dim::Relative(fx) => fx * px
+            };
+            let yy = match xy.1 {
+                Dim::Absolute(iy) => iy as f64,
+                Dim::Relative(fy) => fy * py
+            };
+            (xx,yy)
         };
+
+        self.pad_size = PadElementSize::Positive(
+            Dim::Absolute( (px+x) as i32),
+            Dim::Absolute( (py+y) as i32) 
+        );
+
         let center = self.global_center;
         self.rescale(frame, center, false);
     }
@@ -646,81 +758,46 @@ impl Animateable for Pad {
     fn animate_position(&mut self, xy: (Dim, Dim)) {
         let (x,y) = xy;
 
-        let oc = self.original_frame.center();
-        let ow = self.original_frame.width();
-        let oh = self.original_frame.height();
-        let w = self.frame.width();
-        let h = self.frame.height();
-
-        let nx = match x {
-            Dim::Absolute(ix) => ix,
-            Dim::Relative(fx) => (ow as f64 / 2.0 * fx) as i32
-        };
-        let ny = match y {
-            Dim::Absolute(iy) => iy,
-            Dim::Relative(fy) => (oh as f64 / 2.0 * fy) as i32
-        };
-
-        let frame = Frame {
-            p0: oc + Vec2{x: - w/2 + nx, y: -h/2 + ny},
-            p1: oc + Vec2{x:   w/2 + nx, y:  h/2 + ny},
-        };
+        self.alignment = PadAlignment::XY(x,y);
+        
+        let frame = self.frame;
         let center = self.global_center;
         self.rescale(frame, center, false);
     }
 
     fn reset(&mut self) {
+        self.alignment = self.original_alignment;
+        self.pad_size = self.original_pad_size;
         let center = self.global_center;
-        let frame = self.original_frame;
+        let frame = self.frame;
         self.rescale(frame, center, true);
     }
 }
 
 
-impl Backgroundable for Pad {
-    fn with_background(mut self, bg: Graphic) -> Box<Self> {
-        self.background = bg;
-        Box::new(self)
-    }
-    fn set_background(&mut self, bg: Graphic) {
-        self.background = bg;
-    }
-}
-
 impl Element for Pad {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.ids = Some(PadIds::new(ui.widget_id_generator()));
-        if !self.element.is_setup() { self.element.setup(ui); }
+        let ids = PadIds::new(ui.widget_id_generator());
+        if !self.element.is_setup() { 
+            self.element.set_parent_widget(ids.pad);
+            self.element.setup(ui); 
+        }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
         self.is_setup && self.element.is_setup()
     }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn stop(&mut self) {
         self.element.stop();
     }
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
-        use conrod::{Widget, Positionable};
-
-        if let Some(ref ids) = self.ids {
-
-            let center = self.frame.center() - self.global_center;
-
-            match self.background {
-                Graphic::None => (),
-                Graphic::Color(color) => {
-                    let mut rect = conrod::widget::Rectangle::fill_with(
-                        [self.frame.width() as f64, self.frame.height() as f64],
-                        color
-                    ).x_y(center.x as f64, center.y as f64);
-                    rect.set(ids.background, ui);
-                },
-                // TODO Background texture ///////////////////////////////////////
-                _ => (),
-            }
-            self.element.build_window(ui, ressources);
-        }
+        self.element.build_window(ui, ressources);
         if DEBUG { println!("Pad build.");}
     }
 
@@ -730,7 +807,7 @@ impl Element for Pad {
 
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.rescale(frame, window_center, true);
-        self.update_original_frame();
+        self.update_original_pad_size();
     }
 
     fn get_min_size(&self) -> Vec2<i32> {

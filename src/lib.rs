@@ -91,15 +91,16 @@ impl Timer {
 
 
 /*
-d88888b db    db  .d8b.  .88b  d88. d8888b. db      d88888b
-88'     `8b  d8' d8' `8b 88'YbdP`88 88  `8D 88      88'
-88ooooo  `8bd8'  88ooo88 88  88  88 88oodD' 88      88ooooo
-88~~~~~  .dPYb.  88~~~88 88  88  88 88~~~   88      88~~~~~
-88.     .8P  Y8. 88   88 88  88  88 88      88booo. 88.
-Y88888P YP    YP YP   YP YP  YP  YP 88      Y88888P Y88888P
+d88888b db    db      .d888b.
+88'     `8b  d8'      VP  `8D
+88ooooo  `8bd8'          odD'
+88~~~~~  .dPYb.        .88'
+88.     .8P  Y8.      j88.
+Y88888P YP    YP      888888D
 
 
 */
+
 
 
 
@@ -114,7 +115,7 @@ pub fn expample2() {
             let rel = t/duration;
             use std::f64;
             let tau = rel * f64::consts::PI;
-            let f = Dim::Relative( 1.0 - 0.25 * tau.sin() );
+            let f = Dim::Relative( -0.25 * tau.sin() );
             (f,f)
         }
     }
@@ -125,7 +126,7 @@ pub fn expample2() {
             let tau = rel * f64::consts::PI * 2.0;
             (
                 Dim::Absolute( 0 ),
-                Dim::Absolute( (100.0 * tau.sin()) as i32 )
+                Dim::Absolute( (10.0 * tau.sin()) as i32 )
             )
         }
     }
@@ -172,18 +173,23 @@ pub fn expample2() {
 
     let mut layers = Layers::new();
 
-    layers.push(Plane::new(Graphic::Texture("JapaneseFan".to_string())));
+    layers.push(Plane::new(Graphic::Texture(
+        Texture::new("JapaneseFan".to_string())
+            .with_mode(TextureMode::FitMax)
+    )));
 
 
 
     let pad = Pad::new(Button::new()
-        .with_foreground(Graphic::Texture("RustLogo_hover".to_string()))
+        .with_graphic(Graphic::Texture(
+            Texture::new("RustLogo_hover".to_string())
+            ))
         .with_label("Press".to_string())
         .with_id("testbutton".to_string())
         .with_sender(sender.clone())
         .with_font("NotoSans-Regular".to_string()),
         PadAlignment::Center,
-        PadElementSize::Positive(Dim::Relative(0.5),Dim::Relative(0.5))
+        PadElementSize::Positive(Dim::Absolute(200),Dim::Absolute(200))
     );
 
     #[allow(unused_doc_comment)]
@@ -192,11 +198,11 @@ pub fn expample2() {
      * inner animations while outer ones still running.
      **/
     let animation = Animation::new(pad)
-        .with_duration(1000.0)
+        .with_duration(500.0)
         .with_size_animation(Box::new(AnimClick));
 
     let animation2 = Animation::new(animation)
-        .with_duration(250.0)
+        .with_duration(375.0)
         .with_position_animation(Box::new(AnimClick));
 
     let socket = Socket::new(animation2)
@@ -244,10 +250,6 @@ pub fn example() {
 
     sublist.push(
         Button::new()
-            // custon action...
-            .with_action_click(Box::new(|| {
-                println!("List -> List -> Button 1");
-            }))
             .with_label("Delete".to_string())
             // we need to define an id if we want to identify the button
             .with_id("Delete".to_string())
@@ -259,21 +261,15 @@ pub fn example() {
     sublist.push(
         Pad::new(
             Button::new()
-                .with_action_click(Box::new(|| {
-                    println!("List -> List -> Pad -> Button");
-                }))
                 .with_label("Hey".to_string())
                 .with_id("Hey".to_string())
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
             PadElementSize::Positive(Dim::Relative(0.5), Dim::Relative(0.5))
-        ).with_background(Graphic::Color(conrod::color::LIGHT_ORANGE))
+        )
     );
     sublist.push(
         Button::new()
-            .with_action_click(Box::new(|| {
-                println!("List -> List -> Button 2");
-            }))
             .with_label("Add".to_string())
             .with_id("Add".to_string())
             .with_sender(base_sender.clone())
@@ -283,10 +279,7 @@ pub fn example() {
 
     list.push(
         Pad::new(
-            Button::new()
-                .with_action_click(Box::new(||{
-                    println!("List -> Button");
-                })),
+            Button::new(),
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(20),Dim::Absolute(20))
         )
@@ -295,18 +288,14 @@ pub fn example() {
 
     let mut inner_layer = Layers::new();
     inner_layer.push(Pad::new(
-        Button::new()
-            .with_action_click( Box::new(|| {
-                println!("List -> Pad -> Button with const size");
-            })),
+        Button::new(),
         PadAlignment::TopLeft,
         PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
-        .with_background(Graphic::Color(conrod::color::LIGHT_BLUE))
     );
 
     inner_layer.push(
         Socket::new(
-            Label::new_with_font_size("Your Ads here!".to_string(), 60)
+            Text::new_with_font_size("Your Ads here!".to_string(), 60)
                 .with_color(conrod::color::RED)
         ).with_action_receive(Box::new(|label, msg|{
 
@@ -333,8 +322,7 @@ pub fn example() {
                         let _ = list.pop();
                     },
                     ("Add", ActionMsgData::Click) => {
-                        list.push(Label::new_with_font_size("one more time!".to_string(), 42)
-                            .with_background(Graphic::Color(conrod::color::LIGHT_YELLOW)))
+                        list.push(Text::new_with_font_size("one more time!".to_string(), 42))
                     }
                     _ => ()
                 }
@@ -345,10 +333,7 @@ pub fn example() {
     layers.push(Pad::new(
         Button::new()
             .with_label("action".to_string())
-            .with_action_click(Box::new(||{
-                println!("Äktschöööööön!!!!");
-            }))
-            .with_foreground(Graphic::Color(conrod::color::LIGHT_GREEN))
+            .with_graphic(Graphic::Color(conrod::color::LIGHT_GREEN))
             .with_id("Action".to_string())
             .with_sender(base_sender),
         PadAlignment::Center,
