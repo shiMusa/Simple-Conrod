@@ -112,7 +112,12 @@ YP   YP VP   V8P Y888888P YP  YP  YP YP   YP    YP    Y888888P  `Y88P'  VP   V8P
 */
 
 
-
+widget_ids!(
+    #[derive(Clone)]
+    struct AnimationIds {
+        animation,
+    }
+);
 
 pub trait Animateable : Element {
     fn animate_size(&mut self, _xy: (Dim,Dim)) {}
@@ -138,6 +143,9 @@ pub trait PositionAnimation {
 
 
 pub struct Animation {
+    ids: Option<AnimationIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     pub element: Box<Animateable>,
 
     size_animation: Option<Box<SizeAnimation>>,
@@ -151,6 +159,8 @@ pub struct Animation {
 impl Animation {
     pub fn new(element: Box<Animateable>) -> Box<Self> {
         Box::new(Animation {
+            ids: None,
+            parent: None,
             element,
             size_animation: None,
             position_animation: None,
@@ -230,10 +240,15 @@ impl Animateable for Animation {
 
 impl Element for Animation {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        self.ids = Some(AnimationIds::new(ui.widget_id_generator()));
         self.element.setup(ui);
     }
     fn is_setup(&self) -> bool {
         self.element.is_setup()
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {
@@ -315,9 +330,17 @@ db   8D `8b  d8' Y8b  d8 88 `88. 88.        88
 
 
 
-
+widget_ids!(
+    #[derive(Clone)]
+    struct SocketIds {
+        socket,
+    }
+);
 
 pub struct Socket<E: Element> {
+    ids: Option<SocketIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     is_setup: bool,
     element: Box<E>,
     receive: Box<Fn(&mut E, ActionMsg)>,
@@ -326,6 +349,8 @@ impl<E> Socket<E> where E: Element {
 
     pub fn new(element: Box<E>) -> Box<Self> {
         Box::new(Socket {
+            ids: None,
+            parent: None,
             is_setup: false,
             element,
             receive: Box::new(|_,_|{}),
@@ -340,11 +365,18 @@ impl<E> Socket<E> where E: Element {
 
 impl<E> Element for Socket<E> where E: Element {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = SocketIds::new(ui.widget_id_generator());
+        self.element.set_parent_widget(ids.socket);
         self.element.setup(ui);
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
         self.is_setup && self.element.is_setup()
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {

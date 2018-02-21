@@ -38,6 +38,7 @@ widget_ids!(
 #[derive(Clone)]
 pub struct Plane {
     ids: Option<PlaneIds>,
+    parent: Option<conrod::widget::id::Id>,
 
     is_setup: bool,
     global_center: Vec2<i32>,
@@ -50,6 +51,7 @@ impl Plane {
     pub fn new(graphic: Graphic) -> Box<Self> {
         Box::new(Plane {
             ids: None,
+            parent: None,
 
             is_setup: false,
             global_center: Vec2::zero(),
@@ -120,6 +122,10 @@ impl Element for Plane {
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.graphic {
             Graphic::Texture(ref texture) => {
@@ -188,7 +194,9 @@ pub struct Text {
     frame: Frame<i32>,
     global_center: Vec2<i32>,
 
-    label_ids: Option<LabelIds>,
+
+    ids: Option<LabelIds>,
+    parent: Option<conrod::widget::id::Id>
 }
 
 impl Text {
@@ -204,23 +212,28 @@ impl Text {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
-            label_ids: None,
+            ids: None,
+            parent: None,
         })
     }
 }
 
 impl Element for Text {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        self.label_ids = Some(LabelIds::new(ui.widget_id_generator()));
+        self.ids = Some(LabelIds::new(ui.widget_id_generator()));
         self.is_setup = true;
         if DEBUG { println!("Label --- setup()"); }
     }
     fn is_setup(&self) -> bool { self.is_setup }
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{widget, Positionable, Colorable, Widget};
 
-        if let Some(ref ids) = self.label_ids {
+        if let Some(ref ids) = self.ids {
             let c = self.frame.center() - self.global_center;
 
             let txt = self.text.to_owned();
@@ -335,6 +348,7 @@ pub struct Button {
     frame: Frame<i32>,
 
     button_ids: Option<ButtonIds>,
+    parent: Option<conrod::widget::id::Id>,
     
     foreground: Graphic,
 
@@ -353,6 +367,7 @@ impl Button {
             global_center: Vec2::zero(),
             frame: Frame::new(),
             button_ids: None,
+            parent: None,
             foreground: Graphic::Color(conrod::color::LIGHT_GREY),
             label: None,
             font: None,
@@ -517,6 +532,10 @@ impl Element for Button {
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool { self.is_setup }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
 
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.foreground {

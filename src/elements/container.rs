@@ -49,6 +49,7 @@ Y88888P YP  YP  YP 88         YP       YP
 
 
 pub struct Empty {
+    parent: Option<conrod::widget::id::Id>,
     is_setup: bool,
     frame: Frame<i32>,
     window_center: Vec2<i32>
@@ -56,6 +57,7 @@ pub struct Empty {
 impl Empty {
     pub fn new() -> Box<Self> {
         Box::new(Empty{
+            parent: None,
             is_setup: false,
             frame: Frame::new(),
             window_center: Vec2::zero()
@@ -65,6 +67,10 @@ impl Empty {
 impl Element for Empty {
     fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
     fn is_setup(&self) -> bool { self.is_setup }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
 
     fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 
@@ -101,9 +107,15 @@ Y88888P YP   YP    YP    Y88888P 88   YD `8888Y'
 
 */
 
-
+widget_ids!(
+    struct LayersIds {
+        layers
+    }
+);
 
 pub struct Layers {
+    parent: Option<conrod::widget::id::Id>,
+    ids: Option<LayersIds>,
     layers: Vec<Box<Element>>,
 
     is_setup: bool,
@@ -113,6 +125,8 @@ pub struct Layers {
 impl Layers {
     pub fn new() -> Box<Self> {
         Box::new(Layers {
+            parent: None,
+            ids: None,
             layers: Vec::new(),
             is_setup: false,
             frame: Frame::new()
@@ -144,11 +158,14 @@ impl Layers {
 
 impl Element for Layers {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = LayersIds::new(ui.widget_id_generator());
         for el in &mut self.layers {
             if !el.is_setup() {
+                el.set_parent_widget(ids.layers);
                 el.setup(ui);
             }
         }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
@@ -158,6 +175,10 @@ impl Element for Layers {
         }
         if DEBUG { println!("is layers setup? {}",setup); }
         setup
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {
@@ -240,6 +261,12 @@ Y88888P Y888888P `8888Y'    YP
 */
 
 
+widget_ids!(
+    struct ListIds {
+        list
+    }
+);
+
 
 pub enum ListAlignment {
     Horizontal,
@@ -253,6 +280,9 @@ pub enum ListElementSize {
 
 
 pub struct List {
+    ids: Option<ListIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     elements: Vec<Box<Element>>,
     ring: Ring<i32>,
     alignment: ListAlignment,
@@ -265,6 +295,8 @@ pub struct List {
 impl List {
     pub fn new(alignment: ListAlignment) -> Box<Self> {
         Box::new(List {
+            ids: None,
+            parent: None,
             elements: Vec::new(),
             ring: Ring::new(),
             alignment,
@@ -345,9 +377,14 @@ impl List {
 
 impl Element for List {
     fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = ListIds::new(ui.widget_id_generator());
         for el in &mut self.elements {
-            if !el.is_setup() { el.setup(ui); }
+            if !el.is_setup() { 
+                el.set_parent_widget(ids.list);
+                el.setup(ui); 
+            }
         }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
@@ -357,6 +394,10 @@ impl Element for List {
         }
         if DEBUG { println!("List is setup? {}", setup); }
         setup
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {
@@ -463,6 +504,12 @@ d8888b.  .d8b.  d8888b.
 
 */
 
+widget_ids!(
+    struct PadIds {
+        pad
+    }
+);
+
 
 #[derive(Debug, Copy, Clone)]
 pub enum PadElementSize {
@@ -485,6 +532,9 @@ pub enum PadAlignment {
 }
 
 pub struct Pad {
+    ids: Option<PadIds>,
+    parent: Option<conrod::widget::id::Id>,
+
     element: Box<Element>,
     pad_size: PadElementSize,
     alignment: PadAlignment,
@@ -502,6 +552,8 @@ impl Pad {
     pub fn new(element: Box<Element>, alignment: PadAlignment, size: PadElementSize) -> Box<Self> {
         //println!("Pad with size {:?}", size);
         Box::new(Pad {
+            ids: None,
+            parent: None,
             element,
             alignment,
             pad_size: size,
@@ -725,11 +777,20 @@ impl Animateable for Pad {
 
 impl Element for Pad {
     fn setup(&mut self, ui: &mut conrod::Ui) {
-        if !self.element.is_setup() { self.element.setup(ui); }
+        let ids = PadIds::new(ui.widget_id_generator());
+        if !self.element.is_setup() { 
+            self.element.set_parent_widget(ids.pad);
+            self.element.setup(ui); 
+        }
+        self.ids = Some(ids);
         self.is_setup = true;
     }
     fn is_setup(&self) -> bool {
         self.is_setup && self.element.is_setup()
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
     }
 
     fn stop(&mut self) {

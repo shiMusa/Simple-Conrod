@@ -751,6 +751,8 @@ pub trait Element {
     fn setup(&mut self, ui: &mut conrod::Ui);
     fn is_setup(&self) -> bool;
 
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id);
+
     fn stop(&mut self) {}
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources);
 
