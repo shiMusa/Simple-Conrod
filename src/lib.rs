@@ -89,6 +89,96 @@ impl Timer {
 
 
 
+/*
+d88888b db    db      d8888b.
+88'     `8b  d8'      VP  `8D
+88ooooo  `8bd8'         oooY'
+88~~~~~  .dPYb.         ~~~b.
+88.     .8P  Y8.      db   8D
+Y88888P YP    YP      Y8888P'
+
+
+*/
+
+
+
+
+
+pub fn example3() {
+
+    pub struct AnimClick;
+    impl SizeAnimation for AnimClick {
+        fn calc(&self, t: f64, duration: f64) -> (Dim, Dim) {
+            let rel = t/duration;
+            use std::f64;
+            let tau = rel * f64::consts::PI;
+            let fx = Dim::Relative( -0.25 * tau.sin() );
+            let fy = Dim::Relative( 2.0 * tau.sin() );
+            (fx,fy)
+        }
+    }
+
+    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+
+    // setup timer for continuous refresh of window
+    let (timer_sender, timer_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
+        = mpsc::channel();
+    let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
+
+    // construct window
+    let mut window = Window::new("Animation Test".to_string(), 800,800);
+    window.add_receiver(receiver);
+    window.add_sender(timer_sender);
+
+    let mut scroll = Scroll::new(ScrollAlignment::Vertical);
+
+    for i in 0..10 {
+        let s = format!("Button {}", i);
+
+        let button = Button::new()
+            .with_label(s.clone())
+            .with_sender(sender.clone())
+            .with_id(s.clone());
+        
+        let mut pad = Pad::new(
+            button,
+            PadAlignment::Center,
+            PadElementSize::Negative(Dim::Absolute(25),Dim::Absolute(25))
+        );
+        pad.set_min_size(Vec2{x: 200, y: 100});
+
+        let animation = Animation::new(pad)
+            .with_duration(500.0)
+            .with_size_animation(Box::new(AnimClick))
+            .with_floating(true);
+
+        let socket = Socket::new(animation)
+            .with_action_receive(Box::new(move |ani: &mut Animation, amsg: ActionMsg|{   
+                if amsg.msg == ActionMsgData::Click && amsg.sender_id == s {
+                    println!("{}",s);
+                    ani.start();
+                }
+            }
+        ));
+
+        scroll.push(socket);
+    }
+
+    window.add_element(scroll);
+    window.run();
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 d88888b db    db      .d888b.

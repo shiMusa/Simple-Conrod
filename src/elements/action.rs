@@ -39,7 +39,7 @@ YP   YP  `Y88P'    YP    Y888888P  `Y88P'  VP   V8P YP  YP  YP `8888Y'  Y888P
 use std::sync::mpsc::{Sender};
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ActionMsgData {
     Mouse(f64,f64),
     Click,
@@ -145,11 +145,14 @@ pub trait PositionAnimation {
 pub struct Animation {
     ids: Option<AnimationIds>,
     parent: Option<conrod::widget::id::Id>,
+    floating: bool,
 
     pub element: Box<Animateable>,
 
     size_animation: Option<Box<SizeAnimation>>,
     position_animation: Option<Box<PositionAnimation>>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 
     duration: f64,
     start_time: u64,
@@ -161,9 +164,12 @@ impl Animation {
         Box::new(Animation {
             ids: None,
             parent: None,
+            floating: false,
             element,
             size_animation: None,
             position_animation: None,
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
             duration: 100.0,
             start_time: 0,
             running: false
@@ -182,6 +188,11 @@ impl Animation {
 
     pub fn with_position_animation(mut self, animation: Box<PositionAnimation>) -> Box<Self> {
         self.position_animation = Some(animation);
+        Box::new(self)
+    }
+
+    pub fn with_floating(mut self, floating: bool) -> Box<Self> {
+        self.floating = floating;
         Box::new(self)
     }
 
@@ -205,6 +216,8 @@ impl Animateable for Animation {
             self.start_time = precise_time_ns();
             self.running = true;
         }
+        // TODO not ideal. need to manage individual floating property
+        self.element.set_floating(self.floating);
         self.element.start();
     }
 
@@ -232,6 +245,8 @@ impl Animateable for Animation {
 
     fn reset(&mut self) {
         if !self.running {
+            // TODO not ideal. need to manage individual floating property
+            self.element.set_floating(false);
             self.element.reset();
         }
     }
@@ -247,8 +262,13 @@ impl Element for Animation {
         self.element.is_setup()
     }
 
+    fn set_floating(&mut self, floating: bool) {
+        self.element.set_floating(floating);
+    }
+
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
+        self.element.set_parent_widget(parent);
     }
 
     fn stop(&mut self) {
@@ -264,6 +284,13 @@ impl Element for Animation {
     }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.element.set_frame(frame, window_center);
+    }
+
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
@@ -341,6 +368,9 @@ pub struct Socket<E: Element> {
     ids: Option<SocketIds>,
     parent: Option<conrod::widget::id::Id>,
 
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
+
     is_setup: bool,
     element: Box<E>,
     receive: Box<Fn(&mut E, ActionMsg)>,
@@ -351,6 +381,8 @@ impl<E> Socket<E> where E: Element {
         Box::new(Socket {
             ids: None,
             parent: None,
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
             is_setup: false,
             element,
             receive: Box::new(|_,_|{}),
@@ -377,6 +409,11 @@ impl<E> Element for Socket<E> where E: Element {
 
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
+        self.element.set_parent_widget(parent);
+    }
+
+    fn set_floating(&mut self, floating: bool) {
+        self.element.set_floating(floating);
     }
 
     fn stop(&mut self) {
@@ -391,6 +428,13 @@ impl<E> Element for Socket<E> where E: Element {
     }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.element.set_frame(frame, window_center);
+    }
+
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
     }
 
     fn get_min_size(&self) -> Vec2<i32> {

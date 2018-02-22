@@ -52,7 +52,10 @@ pub struct Empty {
     parent: Option<conrod::widget::id::Id>,
     is_setup: bool,
     frame: Frame<i32>,
-    window_center: Vec2<i32>
+    window_center: Vec2<i32>,
+
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 }
 impl Empty {
     pub fn new() -> Box<Self> {
@@ -60,7 +63,10 @@ impl Empty {
             parent: None,
             is_setup: false,
             frame: Frame::new(),
-            window_center: Vec2::zero()
+            window_center: Vec2::zero(),
+
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
         })
     }
 }
@@ -71,6 +77,7 @@ impl Element for Empty {
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
     }
+    fn set_floating(&mut self, floating: bool) {}
 
     fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 
@@ -79,6 +86,19 @@ impl Element for Empty {
         self.frame = frame;
         self.window_center = window_center;
 
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.max_size
     }
 
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) {}
@@ -180,6 +200,8 @@ impl Element for Layers {
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
     }
+    // TODO maybe implement?
+    fn set_floating(&mut self, floating: bool) {}
 
     fn stop(&mut self) {
         for el in &mut self.layers {
@@ -201,6 +223,10 @@ impl Element for Layers {
             el.set_frame(frame, window_center);
         }
     }
+
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {}
+    fn set_max_size(&mut self, size: Vec2<i32>) {}
 
     fn get_min_size(&self) -> Vec2<i32> {
         let mut res = Vec2::zero();
@@ -235,6 +261,254 @@ impl Element for Layers {
 
 
 
+
+
+
+
+
+
+
+/*
+.d8888.  .o88b. d8888b.  .d88b.  db      db
+88'  YP d8P  Y8 88  `8D .8P  Y8. 88      88
+`8bo.   8P      88oobY' 88    88 88      88
+  `Y8b. 8b      88`8b   88    88 88      88
+db   8D Y8b  d8 88 `88. `8b  d8' 88booo. 88booo.
+`8888Y'  `Y88P' 88   YD  `Y88P'  Y88888P Y88888P
+
+
+*/
+
+
+
+
+
+widget_ids!(
+    struct ScrollIds {
+        scroll
+    }
+);
+
+
+pub enum ScrollAlignment {
+    Horizontal,
+    Vertical,
+}
+
+
+pub struct Scroll {
+    ids: Option<ScrollIds>,
+    parent: Option<conrod::widget::id::Id>,
+
+    elements: Vec<Box<Element>>,
+    alignment: ScrollAlignment,
+
+    is_setup: bool,
+    frame: Frame<i32>,
+    global_center: Vec2<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
+}
+
+impl Scroll {
+    pub fn new(alignment: ScrollAlignment) -> Box<Self> {
+        Box::new(Scroll {
+            ids: None,
+            parent: None,
+            elements: Vec::new(),
+            alignment,
+            is_setup: false,
+            frame: Frame::new(),
+            global_center: Vec2::zero(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+        })
+    }
+
+    pub fn push(&mut self, element: Box<Element>) {
+        let n = self.elements.len();
+        self.insert(n, element);
+    }
+
+    pub fn insert(&mut self, index: usize, element: Box<Element>) {
+
+        if index >= self.elements.len() {
+            self.elements.push(element);
+        } else {
+            self.elements.insert(index, element);
+        }
+
+        self.rescale_elements();
+        self.is_setup = false;
+    }
+
+    pub fn pop(&mut self) -> Option<Box<Element>> {
+        let el = self.elements.pop();
+        self.rescale_elements();
+        el
+    }
+
+    pub fn remove(&mut self, index: usize) -> Box<Element> {
+        let el = self.elements.remove(index);
+        self.rescale_elements();
+        el
+    }
+
+    fn rescale_elements(&mut self) {
+        if DEBUG { println!("rescaling...");}
+
+        let n = self.elements.len();
+
+        match self.alignment {
+            ScrollAlignment::Horizontal => {
+                let mut xp = 0;
+                for ix in 0..n {
+                    let el = &mut self.elements[ix];
+                    let min = el.get_min_size().x;
+                    el.set_frame(Frame{
+                        p0: Vec2{x: xp + self.frame.p0.x, y: self.frame.p0.y},
+                        p1: Vec2{x: xp + min + self.frame.p0.x, y: self.frame.p1.y}
+                    }, self.global_center);
+                    xp += min;
+                }
+            },
+            ScrollAlignment::Vertical => {
+                let mut yp = 0;
+                for ix in 0..n {
+                    let el = &mut self.elements[n-1-ix];
+                    let min = el.get_min_size().y;
+                    el.set_frame(Frame{
+                        p0: Vec2{x: self.frame.p0.x, y: yp + self.frame.p0.y},
+                        p1: Vec2{x: self.frame.p1.x, y: yp + min + self.frame.p0.y}
+                    }, self.global_center);
+                    yp += min;
+                }
+            },
+        }
+        if DEBUG { println!("... rescaling done.");}
+    }
+}
+
+impl Element for Scroll {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = ScrollIds::new(ui.widget_id_generator());
+        for el in &mut self.elements {
+            if !el.is_setup() { 
+                el.set_parent_widget(ids.scroll);
+                el.setup(ui); 
+            }
+        }
+        self.ids = Some(ids);
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        let mut setup = self.is_setup;
+        for el in &self.elements {
+            if !el.is_setup() { setup = false; }
+        }
+        if DEBUG { println!("List is setup? {}", setup); }
+        setup
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+    // TODO maybe implement?
+    fn set_floating(&mut self, floating: bool){}
+
+    fn stop(&mut self) {
+        for el in &mut self.elements {
+            el.stop();
+        }
+    }
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
+        for el in &self.elements {
+            el.build_window(ui, ressources);
+        }
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
+        self.frame = frame;
+        self.rescale_elements();
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+
+    fn get_min_size(&self) -> Vec2<i32> {
+        let mut min = Vec2::zero();
+        for el in &self.elements {
+            let tmp = el.get_min_size();
+            match self.alignment {
+                ScrollAlignment::Horizontal => {
+                    min.x += tmp.x;
+                    if min.y < tmp.y { min.y = tmp.y; }
+                },
+                ScrollAlignment::Vertical   => {
+                    min.y += tmp.y;
+                    if min.x < tmp.x { min.x = tmp.x; }
+                },
+            }
+        }
+        let x = if min.x < self.min_size.x {min.x} else {self.min_size.x};
+        let y = if min.y < self.min_size.y {min.y} else {self.min_size.y};
+        Vec2{x, y}
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        let mut max = Vec2::zero();
+        for el in &self.elements {
+            let tmp = el.get_max_size();
+            match self.alignment {
+                ScrollAlignment::Horizontal => {
+                    max.x = if tmp.x == i32::MAX {
+                        i32::MAX
+                    } else {
+                        max.x + tmp.x
+                    };
+                    if max.y > tmp.y { max.y = tmp.y; }
+                },
+                ScrollAlignment::Vertical   => {
+                    max.y = if tmp.y == i32::MAX {
+                        i32::MAX
+                    } else {
+                        max.y + tmp.y
+                    };
+                    if max.x < tmp.x { max.x = tmp.x; }
+                },
+            }
+        }
+
+        let x;
+        let y;
+        match self.alignment {
+            ScrollAlignment::Horizontal => {
+                x = self.max_size.x;
+                y = if max.y < self.max_size.y {max.y} else {self.max_size.y};
+            },
+            ScrollAlignment::Vertical => {
+                y = self.max_size.y;
+                x = if max.x < self.max_size.x {max.x} else {self.max_size.x};
+            }
+        }
+        Vec2{x,y}
+    }
+
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        if !stop {
+            for el in &mut self.elements {
+                el.transmit_msg(msg.clone(), false);
+            }
+        }
+    }
+}
 
 
 
@@ -290,6 +564,8 @@ pub struct List {
     is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 }
 
 impl List {
@@ -303,6 +579,8 @@ impl List {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
         })
     }
 
@@ -399,6 +677,8 @@ impl Element for List {
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
     }
+    // TODO maybe implement?
+    fn set_floating(&mut self, floating: bool){}
 
     fn stop(&mut self) {
         for el in &mut self.elements {
@@ -420,6 +700,14 @@ impl Element for List {
         self.rescale_elements();
     }
 
+
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+
     fn get_min_size(&self) -> Vec2<i32> {
         let mut min = Vec2::zero();
         for el in &self.elements {
@@ -435,7 +723,9 @@ impl Element for List {
                 },
             }
         }
-        min
+        let x = if min.x > self.min_size.x {min.x} else {self.min_size.x};
+        let y = if min.y > self.min_size.y {min.y} else {self.min_size.y};
+        Vec2{x,y}
     }
     fn get_max_size(&self) -> Vec2<i32> {
         let mut max = Vec2::zero();
@@ -460,7 +750,9 @@ impl Element for List {
                 },
             }
         }
-        max
+        let x = if max.x < self.max_size.x {max.x} else {self.max_size.x};
+        let y = if max.y < self.max_size.y {max.y} else {self.max_size.y};
+        Vec2{x,y}
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
@@ -542,6 +834,8 @@ pub struct Pad {
     is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 
     original_pad_size: PadElementSize,
     original_alignment: PadAlignment,
@@ -560,6 +854,9 @@ impl Pad {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+
             original_pad_size: size,
             original_alignment: alignment,
         })
@@ -791,6 +1088,11 @@ impl Element for Pad {
 
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
+        self.element.set_parent_widget(parent);
+    }
+
+    fn set_floating(&mut self, floating: bool) {
+        self.element.set_floating(floating);
     }
 
     fn stop(&mut self) {
@@ -810,15 +1112,29 @@ impl Element for Pad {
         self.update_original_pad_size();
     }
 
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+
     fn get_min_size(&self) -> Vec2<i32> {
         // TODO not yet correct. Need to consider relative size as well
         // TODO ... maybe not?
-        self.element.get_min_size()
+        let min = self.element.get_min_size();
+        let x = if min.x > self.min_size.x {min.x} else {self.min_size.x};
+        let y = if min.y > self.min_size.y {min.y} else {self.min_size.y};
+        Vec2{x,y}
     }
     fn get_max_size(&self) -> Vec2<i32> {
         // TODO not yet correct. Need to consider relative size as well
         // TODO ... maybe not?
-        self.element.get_max_size()
+        let max = self.element.get_max_size();
+        let x = if max.x > self.max_size.x {max.x} else {self.max_size.x};
+        let y = if max.y > self.max_size.y {max.y} else {self.max_size.y};
+        Vec2{x,y}
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {

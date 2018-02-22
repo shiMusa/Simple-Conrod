@@ -752,6 +752,7 @@ pub trait Element {
     fn is_setup(&self) -> bool;
 
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id);
+    fn set_floating(&mut self, floating: bool);
 
     fn stop(&mut self) {}
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources);
@@ -759,12 +760,13 @@ pub trait Element {
     fn get_frame(&self) -> Frame<i32>;
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>);
 
-    fn get_min_size(&self) -> Vec2<i32> {
-        Vec2::zero()
-    }
-    fn get_max_size(&self) -> Vec2<i32> {
-        Vec2{ x: i32::MAX, y: i32::MAX }
-    }
+    fn set_min_size(&mut self, size: Vec2<i32>);
+    fn get_min_size(&self) -> Vec2<i32>;
+    fn set_max_size(&mut self, size: Vec2<i32>);
+    fn get_max_size(&self) -> Vec2<i32>;
+    // {
+    //    Vec2{ x: i32::MAX, y: i32::MAX }
+    //}
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool);
 }

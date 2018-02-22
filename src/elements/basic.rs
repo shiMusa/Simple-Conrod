@@ -39,25 +39,33 @@ widget_ids!(
 pub struct Plane {
     ids: Option<PlaneIds>,
     parent: Option<conrod::widget::id::Id>,
+    floating: bool,
 
     is_setup: bool,
     global_center: Vec2<i32>,
     frame: Frame<i32>,
 
     graphic: Graphic,
+
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 }
 
 impl Plane {
     pub fn new(graphic: Graphic) -> Box<Self> {
+        use std::i32;
         Box::new(Plane {
             ids: None,
             parent: None,
+            floating: false,
 
             is_setup: false,
             global_center: Vec2::zero(),
             frame: Frame::new(),
 
             graphic,
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
         })
     }
 
@@ -78,6 +86,7 @@ impl Plane {
             .source_rectangle(texture_properties.get_cut(
                 self.frame.width() as u32, self.frame.height() as u32, texture.0, texture.1
             ))
+            .floating(self.floating)
             .x_y(c.x as f64, c.y as f64)
             .w_h(self.frame.width() as f64,self.frame.height() as f64);
         if let Some(ref ids) = self.ids {
@@ -125,6 +134,9 @@ impl Element for Plane {
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
     }
+    fn set_floating(&mut self, floating: bool) {
+        self.floating = floating;
+    }
 
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.graphic {
@@ -148,6 +160,22 @@ impl Element for Plane {
         self.global_center = window_center;
         self.frame = frame;
     }
+
+
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.max_size
+    }
+
 
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) { }
 }
@@ -193,10 +221,13 @@ pub struct Text {
     is_setup: bool,
     frame: Frame<i32>,
     global_center: Vec2<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 
 
     ids: Option<LabelIds>,
-    parent: Option<conrod::widget::id::Id>
+    parent: Option<conrod::widget::id::Id>,
+    floating: bool,
 }
 
 impl Text {
@@ -212,8 +243,12 @@ impl Text {
             is_setup: false,
             frame: Frame::new(),
             global_center: Vec2::zero(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+
             ids: None,
             parent: None,
+            floating: false,
         })
     }
 }
@@ -230,6 +265,10 @@ impl Element for Text {
         self.parent = Some(parent);
     }
 
+    fn set_floating(&mut self, floating: bool) {
+        self.floating = floating;
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         use conrod::{widget, Positionable, Colorable, Widget};
 
@@ -240,7 +279,8 @@ impl Element for Text {
             let mut label = widget::Text::new(&txt)
                 .x_y(c.x as f64, c.y as f64)
                 .color(self.color)
-                .font_size(self.font_size);
+                .font_size(self.font_size)
+                .floating(self.floating);
 
             if let Some(ref font) = self.font {
                 let fnt = ressources.font(font);
@@ -261,12 +301,20 @@ impl Element for Text {
         self.global_center = window_center;
     }
 
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
     fn get_min_size(&self) -> Vec2<i32> {
-        Vec2::zero()
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
     }
     fn get_max_size(&self) -> Vec2<i32> {
-        Vec2{ x: i32::MAX, y: i32::MAX }
+        self.max_size
     }
+
 
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool){}
 }
@@ -346,9 +394,12 @@ pub struct Button {
     is_setup: bool,
     global_center: Vec2<i32>,
     frame: Frame<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
 
     button_ids: Option<ButtonIds>,
     parent: Option<conrod::widget::id::Id>,
+    floating: bool,
     
     foreground: Graphic,
 
@@ -366,8 +417,13 @@ impl Button {
             is_setup: false,
             global_center: Vec2::zero(),
             frame: Frame::new(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+
             button_ids: None,
             parent: None,
+            floating: false,
+
             foreground: Graphic::Color(conrod::color::LIGHT_GREY),
             label: None,
             font: None,
@@ -398,6 +454,7 @@ impl Button {
             let mut button = widget::Button::image(texture.2)
                 .x_y(c.x as f64, c.y as f64)
                 .w_h(self.frame.width() as f64,self.frame.height() as f64)
+                .floating(self.floating)
                 .border(0f64);
 
             if DEBUG { println!("    setting label");}
@@ -441,6 +498,7 @@ impl Button {
                 .color(color)
                 .x_y(c.x as f64, c.y as f64)
                 .w_h(self.frame.width() as f64,self.frame.height() as f64)
+                .floating(self.floating)
                 .border(0f64);
 
             if let Some(ref label) = self.label {
@@ -537,6 +595,10 @@ impl Element for Button {
         self.parent = Some(parent);
     }
 
+    fn set_floating(&mut self, floating: bool) {
+        self.floating = floating;
+    }
+
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
         match self.foreground {
             Graphic::Texture(ref texture) => {
@@ -561,6 +623,19 @@ impl Element for Button {
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
         self.global_center = window_center;
         self.frame = frame;
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.max_size
     }
 
     fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) { }
