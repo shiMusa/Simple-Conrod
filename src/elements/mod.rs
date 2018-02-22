@@ -881,6 +881,13 @@ impl WindowRessources {
 }
 
 
+widget_ids!(
+    struct WindowIds {
+        window
+    }
+);
+
+
 pub struct Window {
     events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
@@ -894,17 +901,21 @@ pub struct Window {
 
     selfsender: Sender<ActionMsg>,
 
+    ids: Option<WindowIds>,
     ressources: WindowRessources,
 }
 
 impl Window {
 
     fn setup(&mut self) {
+        let ids = WindowIds::new(self.ui.widget_id_generator());
         println!("setup(): starting...");
         if let Some(ref mut el) = self.element {
+            el.set_parent_widget(ids.window);
             el.setup(&mut self.ui);
             println!("setup(): element setup.");
         }
+        self.ids = Some(ids);
         println!("setup(): done.");
     }
 
@@ -1003,6 +1014,7 @@ impl Window {
             receivers: vec![selfreceiver],
             senders: Vec::new(),
             selfsender,
+            ids: None,
             ressources
         }
     }
@@ -1166,6 +1178,14 @@ impl Window {
                 let ui = &mut self.ui.set_widgets();
                 let res = &self.ressources;
                 if DEBUG { println!("run() start building...");}
+
+                if let Some(ref ids) = self.ids {
+                    use conrod::{widget, Widget, Colorable};
+                    widget::canvas::Canvas::new()
+                        .rgba(0.0,0.0,0.0,0.0)
+                        .set(ids.window, ui);
+                }
+
                 if let Some(ref mut el) = self.element {
                     //el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui, res);

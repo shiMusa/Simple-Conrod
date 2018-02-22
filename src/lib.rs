@@ -85,6 +85,75 @@ impl Timer {
 
 
 
+/*
+d88888b db    db        j88D
+88'     `8b  d8'       j8~88
+88ooooo  `8bd8'       j8' 88
+88~~~~~  .dPYb.       V88888D
+88.     .8P  Y8.          88
+Y88888P YP    YP          VP
+
+
+*/
+
+
+
+pub fn example4() {
+
+    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    // construct window
+    let mut window = Window::new("Animation Test".to_string(), 800,800);
+    window.add_receiver(receiver);
+
+    window.add_image(
+        "JapaneseFan".to_string(),
+        &assets.join("images/japanese-fan.png")
+    );
+
+    let mut layers = Layers::new();
+
+    let plane = Plane::new(Graphic::Texture(
+        Texture::new("JapaneseFan".to_string())
+            .with_mode(TextureMode::FitMax)
+    ));
+
+    let pad = Pad::new(
+        plane.clone(),
+        PadAlignment::Center,
+        PadElementSize::Negative(Dim::Absolute(100), Dim::Absolute(100))
+    );
+
+    layers.push(pad);
+
+    let pad = Pad::new(
+        plane,
+        PadAlignment::BottomLeft,
+        PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200))
+    );
+
+    layers.push(pad);
+
+
+
+    let padbutton = Pad::new(
+        Button::new(),
+        PadAlignment::Center,
+        PadElementSize::Positive(Dim::Relative(2.0), Dim::Relative(0.1))
+    );
+    layers.push(padbutton);
+
+    let super_pad = Pad::new(
+        layers,
+        PadAlignment::TopRight,
+        PadElementSize::Positive(Dim::Relative(0.8), Dim::Relative(0.8))
+    ).with_crop(true);
+
+    window.add_element(super_pad);
+    window.run();
+}
+
 
 
 
