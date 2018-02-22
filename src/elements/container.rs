@@ -422,6 +422,23 @@ impl Element for Scroll {
         }
     }
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
+        use conrod::{widget, Widget};
+
+        if let Some(ref ids) = self.ids {
+            match self.alignment {
+                ScrollAlignment::Vertical => {
+                    let _ = widget::canvas::Canvas::new()
+                        .scroll_kids_vertically()
+                        .set(ids.scroll, ui);
+                },
+                ScrollAlignment::Horizontal => {
+                    let _ = widget::canvas::Canvas::new()
+                        .scroll_kids_horizontally()
+                        .set(ids.scroll, ui);
+                }
+            }
+        }
+        
         for el in &self.elements {
             el.build_window(ui, ressources);
         }
