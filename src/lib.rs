@@ -14,7 +14,7 @@ extern crate find_folder;
 extern crate image;
 
 use composites::*;
-use elements::{*, container::*, basic::*, action::*};
+use elements::{*, container::*, basic::*, action::*, shared::*, structures::*};
 use std::sync::mpsc::{self, Sender, Receiver};
 
 
@@ -143,10 +143,16 @@ pub fn example5() {
     for i in 0..10 {
         let s = format!("Button {}",i);
         let mut pad = Pad::new(
-            Button::new()
-                .with_label(s.clone())
-                .with_id(s)
-                .with_sender(sender.clone()),
+            Socket::new(
+                Button::new()
+                    .with_label(s.clone())
+                    .with_id(s.clone())
+                    .with_sender(sender.clone())
+            ).with_action_receive(Box::new(move |_,msg|{
+                if msg.sender_id == s {
+                    println!("{:?}",msg);
+                }
+            })),
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(25), Dim::Absolute(25))
         );
@@ -157,7 +163,7 @@ pub fn example5() {
     let pad = Pad::new(
         scroll,
         PadAlignment::Center,
-        PadElementSize::Negative(Dim::Relative(0.2), Dim::Relative(0.1))
+        PadElementSize::Negative(Dim::Relative(0.2), Dim::Relative(0.3))
     );
 
     layers.push(pad);

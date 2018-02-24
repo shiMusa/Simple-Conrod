@@ -1,8 +1,8 @@
 
 
 use conrod;
-use elements::{*, action::*, basic::*};
-use std::sync::mpsc::{self, Sender, Receiver};
+use elements::{*, action::*, basic::*, shared::*, structures::*};
+use std::sync::mpsc::Sender;
 use std::cell::RefCell;
 use std::rc::Rc;
 
