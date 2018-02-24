@@ -1,14 +1,293 @@
 
 
 use conrod;
-use elements::{*, action::*, basic::*};
-use std::sync::mpsc::{self, Sender, Receiver};
+use elements::{*, action::*, basic::*, shared::*, structures::*};
+use std::sync::mpsc::Sender;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::fmt::{Debug, Formatter, Result};
+use std::i32;
 
 
 
 const DEBUG: bool = false;
+
+
+
+
+
+/*
+d8888b. db    db d888888b d888888b  .d88b.  d8b   db
+88  `8D 88    88 `~~88~~' `~~88~~' .8P  Y8. 888o  88
+88oooY' 88    88    88       88    88    88 88V8o 88
+88~~~b. 88    88    88       88    88    88 88 V8o88
+88   8D 88b  d88    88       88    `8b  d8' 88  V888
+Y8888P' ~Y8888P'    YP       YP     `Y88P'  VP   V8P
+
+
+*/
+
+
+widget_ids!(
+    #[derive(Clone)]
+    struct ButtonIds {
+        button,
+    }
+);
+
+
+
+#[derive(Clone)]
+pub struct Button {
+    id: String,
+    senders: Vec<Sender<ActionMsg>>,
+
+    //receive_fn: Box<Fn(&mut Element, ActionMsg)>,
+
+    is_setup: bool,
+    global_center: Vec2<i32>,
+    frame: Frame<i32>,
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
+
+    button_ids: Option<ButtonIds>,
+    parent: Option<conrod::widget::id::Id>,
+    floating: bool,
+    
+    plane: Box<Plane>,
+    plane_hover: Box<Plane>,
+    plane_click: Box<Plane>,
+    is_hover: bool,
+    is_click: bool,
+
+    label: Option<Box<Text>>,
+}
+
+impl Button {
+    pub fn new() -> Box<Self> {
+        Box::new(Button {
+            id: "Button".to_string(),
+            senders: Vec::new(),
+            //receive_fn: rfun,
+
+            is_setup: false,
+            global_center: Vec2::zero(),
+            frame: Frame::new(),
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+
+            button_ids: None,
+            parent: None,
+            floating: false,
+
+            plane: Plane::new(Graphic::Color(conrod::color::LIGHT_GREY)),
+            plane_hover: Plane::new(Graphic::Color(conrod::color::LIGHT_YELLOW)),
+            plane_click: Plane::new(Graphic::Color(conrod::color::LIGHT_GREEN)),
+            is_hover: false,
+            is_click: false,
+
+            label: None
+        })
+    }
+
+    pub fn with_graphics(mut self, std: Graphic, hover: Graphic, click: Graphic) -> Box<Self> {
+        self.plane = Plane::new(std);
+        self.plane_hover = Plane::new(hover);
+        self.plane_click = Plane::new(click);
+        Box::new(self)
+    }
+
+    pub fn with_graphic(self, std: Graphic) -> Box<Self> {
+        self.with_graphics(std.clone(),std.clone(),std)
+    }
+
+    pub fn with_graphic_hover(mut self, hover: Graphic) -> Box<Self> {
+        self.plane_hover = Plane::new(hover);
+        Box::new(self)
+    }
+
+    pub fn with_graphic_click(mut self, click: Graphic) -> Box<Self> {
+        self.plane_click = Plane::new(click);
+        Box::new(self)
+    }
+}
+
+impl Labelable for Button {
+    fn with_font(mut self, font: Font) -> Box<Self> {
+        self.label = Some(Text::new(font));
+        Box::new(self)
+    }
+    fn set_font(&mut self, font: Font) {
+        self.label = Some(Text::new(font));
+    }
+}
+
+
+impl ActionSendable for Button {
+    fn with_id(mut self, id: String) -> Box<Self> {
+        self.id = id;
+        Box::new(self)
+    }
+    fn with_sender(mut self, sender: Sender<ActionMsg>) -> Box<Self> {
+        self.senders.push(sender);
+        Box::new(self)
+    }
+}
+
+
+
+impl Element for Button {
+    fn setup(&mut self, ui: &mut conrod::Ui) {
+        let ids = ButtonIds::new(ui.widget_id_generator());
+
+        self.plane.set_parent_widget(ids.button);
+        self.plane.setup(ui);
+        self.plane_hover.set_parent_widget(ids.button);
+        self.plane_hover.setup(ui);
+        self.plane_click.set_parent_widget(ids.button);
+        self.plane_click.setup(ui);
+
+        if let Some(ref mut label) = self.label {
+            label.set_parent_widget(ids.button);
+            label.setup(ui);
+        }
+
+        self.button_ids = Some(ids);
+        self.is_setup = true;
+    }
+    fn is_setup(&self) -> bool {
+        let mut label_setup = true;
+        if let Some(ref label) = self.label {
+            label_setup = label.is_setup();
+        }
+        self.is_setup && label_setup
+            && self.plane.is_setup()
+            && self.plane_click.is_setup()
+            && self.plane_hover.is_setup()
+    }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+
+    fn set_floating(&mut self, floating: bool) {
+        self.floating = floating;
+    }
+
+    fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
+        use conrod::{widget, Widget, Colorable, Borderable};
+
+        if let Some(ref ids) = self.button_ids {
+            let mut canvas = widget::canvas::Canvas::new()
+                .border(0f64)
+                .rgba(0.0,0.0,0.0,0.0);
+            if let Some(parent) = self.parent {
+                canvas = canvas.parent(parent);
+            }
+            canvas.set(ids.button, ui);
+        }
+        
+        if self.is_click {
+            self.plane_click.build_window(ui, ressources);
+        } else if self.is_hover {
+            self.plane_hover.build_window(ui, ressources);
+        } else {
+            self.plane.build_window(ui, ressources);
+        }
+
+        if let Some(ref label) = self.label {
+            label.build_window(ui,ressources);
+        }
+    }
+
+    fn get_frame(&self) -> Frame<i32> {
+        self.frame
+    }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.global_center = window_center;
+        self.frame = frame;
+
+        self.plane.set_frame(frame, window_center);
+        self.plane_hover.set_frame(frame, window_center);
+        self.plane_click.set_frame(frame, window_center);
+
+        if let Some(ref mut label) = self.label {
+            label.set_frame(frame, window_center);
+        }
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.max_size
+    }
+
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        match msg.msg {
+            ActionMsgData::Mouse(x,y) => {
+                if self.frame.inside(x as i32,y as i32) {
+                    for sender in &self.senders {
+                        let _ = sender.send(ActionMsg{
+                            sender_id: self.id.clone(),
+                            msg: ActionMsgData::Hover
+                        });
+                    }
+                    self.is_hover = true;
+                } else {
+                    if self.is_click {
+                        for sender in &self.senders {
+                            let _ = sender.send(ActionMsg{
+                                sender_id: self.id.clone(),
+                                msg: ActionMsgData::Release
+                            });
+                        }
+                    }
+                    self.is_hover = false;
+                    self.is_click = false;
+                }
+            },
+            ActionMsgData::MousePressLeft(x,y) => {
+                if self.frame.inside(x as i32, y as i32) {
+                    for sender in &self.senders {
+                        let _ = sender.send(ActionMsg{
+                            sender_id: self.id.clone(),
+                            msg: ActionMsgData::Press
+                        });
+                    }
+                    self.is_click = true;
+                }
+            },
+            ActionMsgData::MouseReleaseLeft(_,_) => {
+                if self.is_click {
+                    for sender in &self.senders {
+                        let _ = sender.send(ActionMsg{
+                            sender_id: self.id.clone(),
+                            msg: ActionMsgData::Click
+                        });
+                        let _ = sender.send(ActionMsg{
+                            sender_id: self.id.clone(),
+                            msg: ActionMsgData::Release
+                        });
+                    }
+                }
+                self.is_click = false;
+            },
+            _ => (),
+        }
+        self.plane.transmit_msg(msg.clone(), stop);
+        self.plane_hover.transmit_msg(msg.clone(), stop);
+        self.plane_click.transmit_msg(msg, stop);
+    }
+}
+
+
 
 
 
@@ -438,8 +717,22 @@ impl Element for Scroll {
             self.rescale_elements();
         }
         if !stop {
-            for el in &mut self.elements {
-                el.transmit_msg(msg.clone(), false);
+            match msg.msg {
+                ActionMsgData::Mouse(x,y)
+                | ActionMsgData::MousePressLeft(x,y)
+                | ActionMsgData::MousePressRight(x,y)
+                | ActionMsgData::MousePressMiddle(x,y) => {
+                    if self.frame.inside(x as i32, y as i32) {
+                        for el in &mut self.elements {
+                            el.transmit_msg(msg.clone(), false);
+                        }
+                    }
+                },
+                _ => {
+                    for el in &mut self.elements {
+                        el.transmit_msg(msg.clone(), false);
+                    }
+                }
             }
         }
     }

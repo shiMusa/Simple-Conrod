@@ -655,10 +655,6 @@ impl Pad {
     }
 }
 
-
-// ! ////////////////////////////////////////////////////////////////////////////////////////
-// ! need to change pad_size, not frame!!! //////////////////////////////////////////////////
-// ! ////////////////////////////////////////////////////////////////////////////////////////
 impl Animateable for Pad {
     fn animate_size(&mut self, xy: (Dim,Dim)) {
 
@@ -816,6 +812,7 @@ impl Element for Pad {
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+        // ! need to stop transmitting mouse msgs if cropped ////////////////////////////////////////////////
         if !stop { self.element.transmit_msg(msg, false); }
     }
 }

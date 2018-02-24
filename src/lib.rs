@@ -14,7 +14,7 @@ extern crate find_folder;
 extern crate image;
 
 use composites::*;
-use elements::{*, container::*, basic::*, action::*};
+use elements::{*, container::*, basic::*, action::*, shared::*, structures::*};
 use std::sync::mpsc::{self, Sender, Receiver};
 
 
@@ -114,6 +114,7 @@ pub fn example5() {
 
     // construct window
     let mut window = Window::new("Scroll Test".to_string(), 800,800);
+    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     window.add_receiver(receiver);
 
     window.add_image(
@@ -143,10 +144,16 @@ pub fn example5() {
     for i in 0..10 {
         let s = format!("Button {}",i);
         let mut pad = Pad::new(
-            Button::new()
-                .with_label(s.clone())
-                .with_id(s)
-                .with_sender(sender.clone()),
+            Socket::new(
+                Button::new()
+                    .with_font(font.write( s.clone() ))
+                    .with_id(s.clone())
+                    .with_sender(sender.clone())
+            ).with_action_receive(Box::new(move |_,msg|{
+                if msg.sender_id == s {
+                    println!("{:?}",msg);
+                }
+            })),
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(25), Dim::Absolute(25))
         );
@@ -281,6 +288,7 @@ pub fn example3() {
 
     // construct window
     let mut window = Window::new("Animation Test".to_string(), 800,800);
+    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
@@ -294,7 +302,7 @@ pub fn example3() {
         let s = format!("Button {}", i);
 
         let button = Button::new()
-            .with_label(s.clone())
+            .with_font(font.write(s.clone()))
             .with_sender(sender.clone())
             .with_id(s.clone());
         
@@ -389,6 +397,7 @@ pub fn expample2() {
 
     // construct window
     let mut window = Window::new("Animation Test".to_string(), 800,800);
+    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
@@ -398,6 +407,7 @@ pub fn expample2() {
         "NotoSans-Italic".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
     );
+    let font_italic = Font::new("NotoSans-Italic".to_string(), 42, conrod::color::BLACK);
     window.add_font(
         "NotoSans-Bold".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Bold.ttf")
@@ -432,10 +442,9 @@ pub fn expample2() {
         .with_graphic(Graphic::Texture(
             Texture::new("RustLogo_hover".to_string())
             ))
-        .with_label("Press".to_string())
+        .with_font(font.write("Press".to_string()))
         .with_id("testbutton".to_string())
-        .with_sender(sender.clone())
-        .with_font("NotoSans-Regular".to_string()),
+        .with_sender(sender.clone()),
         PadAlignment::Center,
         PadElementSize::Positive(Dim::Absolute(200),Dim::Absolute(200))
     );
@@ -487,6 +496,7 @@ Y88888P YP    YP
 pub fn example() {
 
     let mut window = Window::new("Container".to_string(), 800, 800);
+    let mut font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     window.add_receiver(base_receiver);
 
@@ -498,7 +508,7 @@ pub fn example() {
 
     sublist.push(
         Button::new()
-            .with_label("Delete".to_string())
+            .with_font(font.write("Delete".to_string()))
             // we need to define an id if we want to identify the button
             .with_id("Delete".to_string())
             // this sender will send the signals of the button
@@ -509,7 +519,7 @@ pub fn example() {
     sublist.push(
         Pad::new(
             Button::new()
-                .with_label("Hey".to_string())
+                .with_font(font.write("Hey".to_string()))
                 .with_id("Hey".to_string())
                 .with_sender(base_sender.clone()),
             PadAlignment::Center,
@@ -518,7 +528,7 @@ pub fn example() {
     );
     sublist.push(
         Button::new()
-            .with_label("Add".to_string())
+            .with_font(font.write("Add".to_string()))
             .with_id("Add".to_string())
             .with_sender(base_sender.clone())
     );
@@ -541,17 +551,19 @@ pub fn example() {
         PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
     );
 
+    font.set_size(60);
+    let tmp = font.clone();
     inner_layer.push(
         Socket::new(
-            Text::new_with_font_size("Your Ads here!".to_string(), 60)
+            Text::new(font.write("Your Ads here!".to_string()))
                 .with_color(conrod::color::RED)
-        ).with_action_receive(Box::new(|label, msg|{
+        ).with_action_receive(Box::new(move |label, msg|{
 
             println!("Label receives {:?}", msg.clone());
 
             match (msg.sender_id.as_ref(), msg.msg) {
                 ("Action", ActionMsgData::Click) => {
-                    label.set_label("Yeäh!!!".to_string());
+                    label.set_font(tmp.write("Yeäh!!!".to_string()));
                 },
                 _ => ()
             }
@@ -561,16 +573,17 @@ pub fn example() {
 
     list.push(inner_layer);
 
-
+    font.set_size(42);
+    let tmp = font.clone();
     layers.push(
         Socket::new(list)
-            .with_action_receive(Box::new(|list: &mut List, msg: ActionMsg|{
+            .with_action_receive(Box::new(move |list: &mut List, msg: ActionMsg|{
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
                         let _ = list.pop();
                     },
                     ("Add", ActionMsgData::Click) => {
-                        list.push(Text::new_with_font_size("one more time!".to_string(), 42))
+                        list.push(Text::new(tmp.write("one more time!".to_string())))
                     }
                     _ => ()
                 }
@@ -580,7 +593,7 @@ pub fn example() {
 
     layers.push(Pad::new(
         Button::new()
-            .with_label("action".to_string())
+            .with_font(font.write("action".to_string()))
             .with_graphic(Graphic::Color(conrod::color::LIGHT_GREEN))
             .with_id("Action".to_string())
             .with_sender(base_sender),

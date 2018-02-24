@@ -56,6 +56,9 @@ pub enum ActionMsgData {
     MouseDragMiddle(f64,f64),
     MouseWheel(f64, f64), // TODO implement
     Click,
+    Press,
+    Release,
+    Hover,
     Text(String),
     U8(u8),
     U16(u16),
