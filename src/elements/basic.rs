@@ -17,6 +17,88 @@ const DEBUG: bool = false;
 
 
 
+
+
+/*
+d88888b .88b  d88. d8888b. d888888b db    db
+88'     88'YbdP`88 88  `8D `~~88~~' `8b  d8'
+88ooooo 88  88  88 88oodD'    88     `8bd8'
+88~~~~~ 88  88  88 88~~~      88       88
+88.     88  88  88 88         88       88
+Y88888P YP  YP  YP 88         YP       YP
+
+
+*/
+
+
+
+
+
+pub struct Empty {
+    parent: Option<conrod::widget::id::Id>,
+    is_setup: bool,
+    frame: Frame<i32>,
+    window_center: Vec2<i32>,
+
+    min_size: Vec2<i32>,
+    max_size: Vec2<i32>,
+}
+impl Empty {
+    pub fn new() -> Box<Self> {
+        Box::new(Empty{
+            parent: None,
+            is_setup: false,
+            frame: Frame::new(),
+            window_center: Vec2::zero(),
+
+            min_size: Vec2::zero(),
+            max_size: Vec2 {x: i32::MAX, y: i32::MAX},
+        })
+    }
+}
+impl Element for Empty {
+    fn setup(&mut self, _ui: &mut conrod::Ui) { self.is_setup = true }
+    fn is_setup(&self) -> bool { self.is_setup }
+
+    fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
+        self.parent = Some(parent);
+    }
+    fn set_floating(&mut self, floating: bool) {}
+
+    fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
+
+    fn get_frame(&self) -> Frame<i32> { self.frame }
+    fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        self.frame = frame;
+        self.window_center = window_center;
+
+    }
+
+    fn set_min_size(&mut self, size: Vec2<i32>) {
+        self.min_size = size;
+    }
+    fn get_min_size(&self) -> Vec2<i32> {
+        self.min_size
+    }
+    fn set_max_size(&mut self, size: Vec2<i32>) {
+        self.max_size = size;
+    }
+    fn get_max_size(&self) -> Vec2<i32> {
+        self.max_size
+    }
+
+    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) {}
+}
+
+
+
+
+
+
+
+
+
+
 /*
 d8888b. db       .d8b.  d8b   db d88888b
 88  `8D 88      d8' `8b 888o  88 88'
@@ -27,6 +109,9 @@ d8888b. db       .d8b.  d8b   db d88888b
 
 
 */
+
+
+
 
 widget_ids!(
     #[derive(Clone)]
@@ -82,13 +167,16 @@ impl Plane {
         let c = self.frame.center()-self.global_center;
 
         if DEBUG { println!("creating plane image...");}
-        let img = widget::primitive::image::Image::new(texture.2)
+        let mut img = widget::primitive::image::Image::new(texture.2)
             .source_rectangle(texture_properties.get_cut(
                 self.frame.width() as u32, self.frame.height() as u32, texture.0, texture.1
             ))
             .floating(self.floating)
             .x_y(c.x as f64, c.y as f64)
             .w_h(self.frame.width() as f64,self.frame.height() as f64);
+        if let Some(parent) = self.parent {
+            img = img.parent(parent);
+        }
         if let Some(ref ids) = self.ids {
             img.set(ids.plane, _ui);
         }
@@ -107,6 +195,9 @@ impl Plane {
                 [self.frame.width() as f64, self.frame.height() as f64],
                 color
             ).x_y(c.x as f64, c.y as f64);
+            if let Some(parent) = self.parent {
+                rect = rect.parent(parent);
+            }
             rect.set(ids.plane, ui);
         }
         
@@ -287,6 +378,9 @@ impl Element for Text {
                 if let Some(fnt) = fnt {
                     label = label.font_id(*fnt);
                 }
+            }
+            if let Some(parent) = self.parent {
+                label = label.parent(parent);
             }
 
             label.set(ids.text, ui);
@@ -470,6 +564,10 @@ impl Button {
                 }
             }
 
+            if let Some(parent) = self.parent {
+                button = button.parent(parent);
+            }
+
             if DEBUG { println!("    setting event");}
             let mut event = button.set(ids.button, ui);
 
@@ -509,6 +607,10 @@ impl Button {
                 if let Some(fnt) = fnt {
                     button = button.label_font_id(*fnt);
                 }
+            }
+
+            if let Some(parent) = self.parent {
+                button = button.parent(parent);
             }
 
             let mut event = button.set(ids.button, ui);

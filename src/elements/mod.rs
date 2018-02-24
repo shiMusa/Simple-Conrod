@@ -565,6 +565,10 @@ impl<T> Frame<T> where T: Num + NumCast + PartialOrd + Copy {
     pub fn size(&self) -> Vec2<T> {
         self.p1 - self.p0
     }
+
+    pub fn inside(&self, x: T, y: T) -> bool {
+        x >= self.p0.x && x <= self.p1.x && y >= self.p0.y && y<= self.p1.y
+    }
     //pub fn center_left(&self) -> Vec2<T>
 }
 
@@ -764,9 +768,6 @@ pub trait Element {
     fn get_min_size(&self) -> Vec2<i32>;
     fn set_max_size(&mut self, size: Vec2<i32>);
     fn get_max_size(&self) -> Vec2<i32>;
-    // {
-    //    Vec2{ x: i32::MAX, y: i32::MAX }
-    //}
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool);
 }
@@ -881,6 +882,13 @@ impl WindowRessources {
 }
 
 
+widget_ids!(
+    struct WindowIds {
+        window
+    }
+);
+
+
 pub struct Window {
     events_loop: glium::glutin::EventsLoop,
     display: glium::Display,
@@ -894,17 +902,21 @@ pub struct Window {
 
     selfsender: Sender<ActionMsg>,
 
+    ids: Option<WindowIds>,
     ressources: WindowRessources,
 }
 
 impl Window {
 
     fn setup(&mut self) {
+        let ids = WindowIds::new(self.ui.widget_id_generator());
         println!("setup(): starting...");
         if let Some(ref mut el) = self.element {
+            el.set_parent_widget(ids.window);
             el.setup(&mut self.ui);
             println!("setup(): element setup.");
         }
+        self.ids = Some(ids);
         println!("setup(): done.");
     }
 
@@ -939,6 +951,21 @@ impl Window {
 
     pub fn add_sender(&mut self, sender: Sender<ActionMsg>) {
         self.senders.push(sender);
+    }
+
+    fn send(&mut self, msg: ActionMsgData) {
+        for sender in &mut self.senders {
+            let tmp = msg.clone();
+            let _ = sender.send(ActionMsg{
+                sender_id: "Window".to_string(),
+                msg: tmp
+            });
+        }
+        
+        let _ = self.selfsender.send(ActionMsg{
+            sender_id: "Window".to_string(),
+            msg
+        });
     }
 
 
@@ -1003,6 +1030,7 @@ impl Window {
             receivers: vec![selfreceiver],
             senders: Vec::new(),
             selfsender,
+            ids: None,
             ressources
         }
     }
@@ -1025,6 +1053,74 @@ impl Window {
 
         let mut window_frame = Frame::new();
 
+
+        // mouse helper
+        struct MouseDrag {
+            pub current: (f64,f64),
+            pub left: bool,
+            pub right: bool,
+            pub middle: bool,
+            start_left: (f64,f64),
+            start_right: (f64,f64),
+            start_middle: (f64, f64),
+        }
+        impl MouseDrag {
+            pub fn update(&mut self, x: f64, y: f64) {
+                self.current = (x,y);
+            }
+
+            pub fn start_left(&mut self) {
+                self.left = true;
+                self.start_left = self.current;
+            }
+            pub fn start_right(&mut self) {
+                self.right = true;
+                self.start_right = self.current;
+            }
+            pub fn start_middle(&mut self) {
+                self.middle = true;
+                self.start_middle = self.current;
+            }
+
+            pub fn stop_left(&mut self) {
+                self.left = false;
+            }
+            pub fn stop_right(&mut self) {
+                self.right = false;
+            }
+            pub fn stop_middle(&mut self) {
+                self.middle = false;
+            }
+            
+            pub fn get_left(&self) -> ActionMsgData {
+                let (x,y) = self.current;
+                let (xx,yy) = (x-self.start_left.0, y-self.start_left.1);
+                ActionMsgData::MouseDragLeft(xx,yy)
+            }
+            pub fn get_right(&self) -> ActionMsgData {
+                let (x,y) = self.current;
+                let (xx,yy) = (x-self.start_right.0, y-self.start_right.1);
+                ActionMsgData::MouseDragRight(xx,yy)
+            }
+            pub fn get_middle(&self) -> ActionMsgData {
+                let (x,y) = self.current;
+                let (xx,yy) = (x-self.start_middle.0, y-self.start_middle.1);
+                ActionMsgData::MouseDragMiddle(xx,yy)
+            }
+        }
+
+        let mut mouse_drag = MouseDrag{
+            current: (0.0,0.0),
+            left: false, right: false, middle: false,
+            start_left: (0.0,0.0),
+            start_right: (0.0,0.0),
+            start_middle: (0.0,0.0)
+        };
+
+
+        let mut window_height = 0;
+
+
         //println!("loop is starting ...............................");
         'render: loop {
             events.clear();
@@ -1041,27 +1137,74 @@ impl Window {
             // process events
             for event in events.drain(..) {
 
-                use conrod::glium::glutin::{Event, WindowEvent, KeyboardInput, VirtualKeyCode};
+                use conrod::glium::glutin::{Event, WindowEvent, KeyboardInput, VirtualKeyCode,
+                MouseButton, ElementState};
 
                 match event.clone() {
                     Event::WindowEvent { event, .. } => {
                         match event {
+                            WindowEvent::MouseInput {
+                                state,
+                                button,
+                                ..
+                            } => {
+                                match state {
+                                    ElementState::Pressed => {
+                                        let (x,y) = mouse_drag.current;
+                                        match button {
+                                            MouseButton::Left => {
+                                                mouse_drag.start_left();
+                                                self.send(ActionMsgData::MousePressLeft(x,y));
+                                            },
+                                            MouseButton::Right => {
+                                                mouse_drag.start_right();
+                                                self.send(ActionMsgData::MousePressRight(x,y));
+                                            },
+                                            MouseButton::Middle => {
+                                                mouse_drag.start_middle();
+                                                self.send(ActionMsgData::MousePressMiddle(x,y));
+                                            },
+                                            _ => (),
+                                        }
+                                    },
+                                    ElementState::Released => {
+                                        let (x,y) = mouse_drag.current;
+                                        match button {
+                                            MouseButton::Left => {
+                                                mouse_drag.stop_left();
+                                                self.send(ActionMsgData::MouseReleaseLeft(x,y));
+                                            },
+                                            MouseButton::Right => {
+                                                mouse_drag.stop_right();
+                                                self.send(ActionMsgData::MouseReleaseRight(x,y));
+                                            },
+                                            MouseButton::Middle => {
+                                                mouse_drag.stop_middle();
+                                                self.send(ActionMsgData::MouseReleaseMiddle(x,y));
+                                            },
+                                            _ => (),
+                                        }
+                                    },
+                                    _ => (),
+                                }
+                            }
                             WindowEvent::CursorMoved {
                                 position: (x,y),
                                 ..
                             } => {
                                 //println!("mouse moved {}, {}",x,y);
-                                for sender in &mut self.senders {
-                                    let _ = sender.send(ActionMsg{
-                                        sender_id: "window".to_string(),
-                                        msg: ActionMsgData::Mouse(x,y)
-                                    });
-                                }
+                                self.send(ActionMsgData::Mouse(x,window_height as f64 - y));
 
-                                let _ = self.selfsender.send(ActionMsg{
-                                    sender_id: "window".to_string(),
-                                    msg: ActionMsgData::Mouse(x,y)
-                                });
+                                mouse_drag.update(x,window_height as f64 - y);
+                                if mouse_drag.left {
+                                    self.send(mouse_drag.get_left());
+                                }
+                                if mouse_drag.right {
+                                    self.send(mouse_drag.get_right());
+                                }
+                                if mouse_drag.middle {
+                                    self.send(mouse_drag.get_middle());
+                                }
                             },
                             WindowEvent::Closed |
                             WindowEvent::KeyboardInput {
@@ -1071,18 +1214,15 @@ impl Window {
                                 },
                                 ..
                             } => {
-                                for sender in &mut self.senders {
-                                    let _ = sender.send(ActionMsg{
-                                        sender_id: "window".to_string(),
-                                        msg: ActionMsgData::Exit
-                                    });
-                                }
+                                self.send(ActionMsgData::Exit);
                                 use std::thread;
                                 use std::time::Duration;
                                 thread::sleep(Duration::from_millis(1000));
                                 break 'render
                             },
                             WindowEvent::Resized(mut w, mut h) => {
+
+                                window_height = h;
 
                                 // TODO is this limit necessary?
                                 if let Some(ref mut el) = self.element {
@@ -1153,6 +1293,7 @@ impl Window {
             if let Some(ref mut el) = self.element {
                 if !el.is_setup() {
                     el.setup(&mut self.ui);
+                    update = true;
                 }
             }
 
@@ -1166,6 +1307,14 @@ impl Window {
                 let ui = &mut self.ui.set_widgets();
                 let res = &self.ressources;
                 if DEBUG { println!("run() start building...");}
+
+                if let Some(ref ids) = self.ids {
+                    use conrod::{widget, Widget, Colorable};
+                    widget::canvas::Canvas::new()
+                        .rgba(0.0,0.0,0.0,0.0)
+                        .set(ids.window, ui);
+                }
+
                 if let Some(ref mut el) = self.element {
                     //el.set_frame(window_frame, window_frame.center());
                     el.build_window(ui, res);
