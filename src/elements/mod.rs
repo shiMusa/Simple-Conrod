@@ -91,11 +91,8 @@ pub trait Element {
 }
 
 pub trait Labelable {
-    fn with_label(self, label: String) -> Box<Self>;
-    fn set_label(&mut self, label: String);
-
-    fn with_font(self, font: String) -> Box<Self>;
-    fn set_font(&mut self, font: String);
+    fn with_font(self, font: Font) -> Box<Self>;
+    fn set_font(&mut self, font: Font);
 }
 
 pub trait Colorable {

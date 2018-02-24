@@ -64,6 +64,30 @@ impl Font {
         res.text = text;
         res
     }
+
+    pub fn set_size(&mut self, size: u32) {
+        self.size = size;
+    }
+
+    pub fn set_color(&mut self, color: conrod::Color) {
+        self.color = color;
+    }
+
+    pub fn get_text(&self) -> String {
+        self.text.clone()
+    }
+
+    pub fn get_size(&self) -> u32 {
+        self.size
+    }
+
+    pub fn get_font_id(&self) -> String {
+        self.font_id.clone()
+    }
+
+    pub fn get_color(&self) -> conrod::Color {
+        self.color
+    }
 }
 
 
