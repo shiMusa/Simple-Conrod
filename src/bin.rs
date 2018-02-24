@@ -22,7 +22,8 @@ use std::sync::mpsc::{self, Sender, Receiver};
 
 
 fn main() {
-    sabi::example4();
+    sabi::example5();
+    //sabi::example4();
     //sabi::example3();
     //sabi::expample2();
     //sabi::example();

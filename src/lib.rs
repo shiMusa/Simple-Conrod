@@ -5,6 +5,7 @@
 #![feature(use_extern_macros)]
 
 pub mod elements;
+pub mod composites;
 
 #[macro_use] extern crate conrod;
 extern crate time;
@@ -12,7 +13,7 @@ extern crate num;
 extern crate find_folder;
 extern crate image;
 
-
+use composites::*;
 use elements::{*, container::*, basic::*, action::*};
 use std::sync::mpsc::{self, Sender, Receiver};
 
@@ -80,6 +81,90 @@ impl Timer {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+d88888b db    db        ooooo
+88'     `8b  d8'       8P~~~~
+88ooooo  `8bd8'       dP
+88~~~~~  .dPYb.       V8888b.
+88.     .8P  Y8.          `8D
+Y88888P YP    YP      88oobY'
+
+
+*/
+
+
+pub fn example5() {
+
+    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    // construct window
+    let mut window = Window::new("Scroll Test".to_string(), 800,800);
+    window.add_receiver(receiver);
+
+    window.add_image(
+        "JapaneseFan".to_string(),
+        &assets.join("images/japanese-fan.png")
+    );
+
+    let mut layers = Layers::new();
+
+    // * layer 0 ---------------------------------------------------------
+
+    let plane = Plane::new(Graphic::Texture(
+        Texture::new("JapaneseFan".to_string())
+            .with_mode(TextureMode::FitMax)
+    ));
+    layers.push(plane);
+
+    // * layer 1 ---------------------------------------------------------
+
+
+    let mut scroll = Scroll::new(
+        ScrollAlignment::Vertical,
+        "Scroll".to_string(),
+        sender.clone()
+    );
+
+    for i in 0..10 {
+        let s = format!("Button {}",i);
+        let mut pad = Pad::new(
+            Button::new()
+                .with_label(s.clone())
+                .with_id(s)
+                .with_sender(sender.clone()),
+            PadAlignment::Center,
+            PadElementSize::Negative(Dim::Absolute(25), Dim::Absolute(25))
+        );
+        pad.set_min_size(Vec2{x: 400, y: 150});
+        scroll.push(pad);
+    }
+
+    let pad = Pad::new(
+        scroll,
+        PadAlignment::Center,
+        PadElementSize::Negative(Dim::Relative(0.2), Dim::Relative(0.1))
+    );
+
+    layers.push(pad);
+    
+    window.add_element(layers);
+    window.run();
+}
 
 
 
@@ -199,7 +284,11 @@ pub fn example3() {
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
-    let mut scroll = Scroll::new(ScrollAlignment::Vertical);
+    let mut scroll = Scroll::new(
+        ScrollAlignment::Vertical,
+        "Scroll".to_string(),
+        sender.clone()
+    );
 
     for i in 0..10 {
         let s = format!("Button {}", i);

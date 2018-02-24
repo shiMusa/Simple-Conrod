@@ -39,9 +39,22 @@ YP   YP  `Y88P'    YP    Y888888P  `Y88P'  VP   V8P YP  YP  YP `8888Y'  Y888P
 use std::sync::mpsc::{Sender};
 
 
+
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ActionMsgData {
     Mouse(f64,f64),
+    MousePressLeft(f64,f64),
+    MousePressRight(f64,f64),
+    MousePressMiddle(f64,f64),
+    MouseReleaseLeft(f64,f64),
+    MouseReleaseRight(f64,f64),
+    MouseReleaseMiddle(f64,f64),
+    MouseDragLeft(f64,f64),
+    MouseDragRight(f64,f64),
+    MouseDragMiddle(f64,f64),
+    MouseWheel(f64, f64), // TODO implement
     Click,
     Text(String),
     U8(u8),
@@ -398,7 +411,9 @@ impl<E> Socket<E> where E: Element {
 impl<E> Element for Socket<E> where E: Element {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         let ids = SocketIds::new(ui.widget_id_generator());
-        self.element.set_parent_widget(ids.socket);
+        if let Some(parent) = self.parent {
+            self.element.set_parent_widget(parent);
+        }
         self.element.setup(ui);
         self.ids = Some(ids);
         self.is_setup = true;
