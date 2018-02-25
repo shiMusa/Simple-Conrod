@@ -109,6 +109,17 @@ Y88888P YP    YP      88oobY'
 
 pub fn example5() {
 
+    // * define hover-animation
+    pub struct AnimHover;
+    impl SizeAnimation for AnimHover {
+        fn calc(&self, t: f64, duration: f64) -> (Dim, Dim) {
+            use std::f64;
+            let tau = t/1000.0 * f64::consts::PI;
+            let f = Dim::Relative( 0.25 * tau.atan()/(f64::consts::PI/2.0) );
+            (f,f)
+        }
+    }
+
     let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
 
@@ -116,6 +127,12 @@ pub fn example5() {
     let mut window = Window::new("Scroll Test".to_string(), 800,800);
     let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     window.add_receiver(receiver);
+
+    // setup timer for continuous refresh of window
+    let (timer_sender, timer_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
+        = mpsc::channel();
+    let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
+    window.add_sender(timer_sender);
 
     window.add_image(
         "JapaneseFan".to_string(),
@@ -146,6 +163,7 @@ pub fn example5() {
 
     for i in 0..10 {
         let s = format!("Button {}",i);
+        let sc = s.clone();
         let mut pad = Pad::new(
             Socket::new(
                 Button::new()
@@ -153,20 +171,36 @@ pub fn example5() {
                     .with_id(s.clone())
                     .with_sender(sender.clone())
             ).with_action_receive(Box::new(move |_,msg|{
-                if msg.sender_id == s 
+                if msg.sender_id == sc
                     && ( msg.msg == ActionMsgData::Press
                         || msg.msg == ActionMsgData::Click ) {
                     println!("{:?}",msg);
-                    None
-                } else {
-                    Some(msg)
                 }
+                Some(msg)
             })),
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(25), Dim::Absolute(25))
         );
         pad.set_min_size(Vec2{x: 400, y: 150});
-        scroll.push(pad);
+
+        let animation = Animation::new(pad)
+            .with_duration(50000.0)
+            .with_size_animation(Box::new(AnimHover))
+            .with_floating(true);
+
+        let socket = Socket::new(animation)
+            .with_action_receive(Box::new(move |ani: &mut Animation, amsg: ActionMsg|{   
+                if amsg.msg == ActionMsgData::Hover && amsg.sender_id == s {
+                    println!("{}",s);
+                    ani.start();
+                    None
+                } else {
+                    Some(amsg)
+                }
+            }
+        ));
+
+        scroll.push(socket);
     }
 
     let pad = Pad::new(
