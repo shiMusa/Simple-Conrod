@@ -606,6 +606,17 @@ impl Scroll {
     }
 }
 
+impl ActionSendable for Scroll {
+    fn with_id(mut self, id: String) -> Box<Self> {
+        self.id = id;
+        Box::new(self)
+    }
+    fn with_sender(mut self, sender: Sender<ActionMsg>) -> Box<Self> {
+        self.senders.push(sender);
+        Box::new(self)
+    }
+}
+
 impl Element for Scroll {
     fn setup(&mut self, ui: &mut conrod::Ui) {
         // elements
