@@ -84,7 +84,8 @@ pub trait Element {
     fn set_max_size(&mut self, size: Vec2<i32>);
     fn get_max_size(&self) -> Vec2<i32>;
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool);
+    // * send message. If not processed, send back so that next element can use it.
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg>;
 }
 
 pub trait Labelable {

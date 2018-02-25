@@ -229,7 +229,8 @@ impl Element for Button {
         self.max_size
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
+        let mut used_up = false;
         match msg.msg {
             ActionMsgData::Mouse(x,y) => {
                 if self.frame.inside(x as i32,y as i32) {
@@ -240,6 +241,7 @@ impl Element for Button {
                         });
                     }
                     self.is_hover = true;
+                    used_up = true;
                 } else {
                     if self.is_click {
                         for sender in &self.senders {
@@ -262,6 +264,7 @@ impl Element for Button {
                         });
                     }
                     self.is_click = true;
+                    used_up = true;
                 }
             },
             ActionMsgData::MouseReleaseLeft(_,_) => {
@@ -281,9 +284,14 @@ impl Element for Button {
             },
             _ => (),
         }
-        self.plane.transmit_msg(msg.clone(), stop);
-        self.plane_hover.transmit_msg(msg.clone(), stop);
-        self.plane_click.transmit_msg(msg, stop);
+        if used_up {
+            let _ = self.plane.transmit_msg(msg.clone(), stop);
+            let _ = self.plane_hover.transmit_msg(msg.clone(), stop);
+            let _ = self.plane_click.transmit_msg(msg, stop);
+            None
+        } else {
+            Some(msg)
+        }
     }
 }
 
@@ -367,6 +375,7 @@ impl Scroll {
                 ActionMsgData::MousePressLeft(x,y) => {
                     if button.get_frame().inside(x as i32, y as i32) {
                         (*scrolltr.borrow_mut()) = true;
+                        return None;
                     }
                 },
                 ActionMsgData::MouseDragLeft(x,y) => {
@@ -379,6 +388,7 @@ impl Scroll {
                                 (*scrollp.borrow_mut()).1 = y;
                             }
                         }
+                        return None;
                     }
                     
                 },
@@ -393,6 +403,8 @@ impl Scroll {
                 }
                 _ => ()
             }
+            Some(msg)
+
         }));
 
         Box::new(Scroll {
@@ -528,12 +540,14 @@ impl Scroll {
                 let scroll = (sp as f64)/(s.x as f64);
                 let delta = (scroll * self.get_elements_min_size().x as f64) as i32;
 
+                let bar_shift = if self.is_inside_area() {0} else {self.scroll_bar_width};
+
                 let mut xp = 0;
                 for ix in 0..n {
                     let el = &mut self.elements[ix];
                     let min = el.get_min_size().x;
                     el.set_frame(Frame{
-                        p0: Vec2{x: delta + xp + self.frame.p0.x, y: self.frame.p0.y},
+                        p0: Vec2{x: delta + xp + self.frame.p0.x, y: self.frame.p0.y + bar_shift},
                         p1: Vec2{x: delta + xp + min + self.frame.p0.x, y: self.frame.p1.y}
                     }, self.global_center);
                     xp += min;
@@ -543,11 +557,11 @@ impl Scroll {
                 self.scroll_bar.set_frame(
                     Frame{
                         p0: Vec2 {
-                            y: self.frame.p0.y + self.scroll_bar_width,
+                            y: self.frame.p0.y,
                             x: (scroll * s.x as f64) as i32 + self.frame.p0.x
                         },
                         p1: Vec2 {
-                            y: self.frame.p0.y,
+                            y: self.frame.p0.y + self.scroll_bar_width,
                             x: (scroll * s.x as f64) as i32 + self.frame.p0.x + bar,
                         }
                     },
@@ -570,13 +584,17 @@ impl Scroll {
                 let scroll = (sp as f64)/(s.y as f64);
                 let delta = -(scroll * self.get_elements_min_size().y as f64) as i32;
 
+
+                let bar_shift = if self.is_inside_area() {0} else {self.scroll_bar_width};
+
+
                 let mut yp = 0;
                 for ix in 0..n {
                     let el = &mut self.elements[ix];
                     let min = el.get_min_size().y;
                     el.set_frame(Frame{
                         p0: Vec2{x: self.frame.p0.x, y: delta + self.frame.p1.y - yp - min},
-                        p1: Vec2{x: self.frame.p1.x, y: delta + self.frame.p1.y - yp}
+                        p1: Vec2{x: self.frame.p1.x - bar_shift, y: delta + self.frame.p1.y - yp}
                     }, self.global_center);
                     yp += min;
                 }
@@ -706,8 +724,8 @@ impl Element for Scroll {
         Vec2{x,y}
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
-        self.scroll_bar.transmit_msg(msg.clone(), false);
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
+        let mut loc_msg = self.scroll_bar.transmit_msg(msg.clone(), false);
         if *self.scroll_trigger.borrow() {
             self.rescale_elements();
         }
@@ -719,16 +737,21 @@ impl Element for Scroll {
                 | ActionMsgData::MousePressMiddle(x,y) => {
                     if self.frame.inside(x as i32, y as i32) {
                         for el in &mut self.elements {
-                            el.transmit_msg(msg.clone(), false);
+                            if let Some(tmp) = loc_msg {
+                                loc_msg = el.transmit_msg(tmp, false);
+                            }
                         }
                     }
                 },
                 _ => {
                     for el in &mut self.elements {
-                        el.transmit_msg(msg.clone(), false);
+                        if let Some(tmp) = loc_msg {
+                            loc_msg = el.transmit_msg(tmp, false);
+                        }
                     }
                 }
             }
         }
+        loc_msg
     }
 }

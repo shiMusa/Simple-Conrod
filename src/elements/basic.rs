@@ -85,7 +85,9 @@ impl Element for Empty {
         self.max_size
     }
 
-    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) {}
+    fn transmit_msg(&mut self, msg: ActionMsg, _stop: bool) -> Option<ActionMsg> {
+        Some(msg)
+    }
 }
 
 
@@ -266,7 +268,9 @@ impl Element for Plane {
     }
 
 
-    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool) { }
+    fn transmit_msg(&mut self, msg: ActionMsg, _stop: bool) -> Option<ActionMsg>{
+        Some(msg)
+    }
 }
 
 
@@ -398,7 +402,9 @@ impl Element for Text {
     }
 
 
-    fn transmit_msg(&mut self, _msg: ActionMsg, _stop: bool){}
+    fn transmit_msg(&mut self, msg: ActionMsg, _stop: bool) -> Option<ActionMsg> {
+        Some(msg)
+    }
 }
 
 impl Labelable for Text {

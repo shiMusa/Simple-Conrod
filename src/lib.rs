@@ -124,13 +124,16 @@ pub fn example5() {
 
     let mut layers = Layers::new();
 
+
     // * layer 0 ---------------------------------------------------------
+
 
     let plane = Plane::new(Graphic::Texture(
         Texture::new("JapaneseFan".to_string())
             .with_mode(TextureMode::FitMax)
     ));
     layers.push(plane);
+
 
     // * layer 1 ---------------------------------------------------------
 
@@ -154,6 +157,9 @@ pub fn example5() {
                     && ( msg.msg == ActionMsgData::Press
                         || msg.msg == ActionMsgData::Click ) {
                     println!("{:?}",msg);
+                    None
+                } else {
+                    Some(msg)
                 }
             })),
             PadAlignment::Center,
@@ -325,6 +331,9 @@ pub fn example3() {
                 if amsg.msg == ActionMsgData::Click && amsg.sender_id == s {
                     println!("{}",s);
                     ani.start();
+                    None
+                } else {
+                    Some(amsg)
                 }
             }
         ));
@@ -466,11 +475,13 @@ pub fn expample2() {
 
     let socket = Socket::new(animation2)
         .with_action_receive(Box::new(|ani, amsg|{
+            let msgc = amsg.clone();
             match (amsg.sender_id.as_ref(), amsg.msg) {
                 ("testbutton", ActionMsgData::Click) => {
                     ani.start();
+                    None
                 },
-                _ => ()
+                _ => Some(msgc)
             }
         })
     );
@@ -562,12 +573,13 @@ pub fn example() {
         ).with_action_receive(Box::new(move |label, msg|{
 
             println!("Label receives {:?}", msg.clone());
-
+            let msgc = msg.clone();
             match (msg.sender_id.as_ref(), msg.msg) {
                 ("Action", ActionMsgData::Click) => {
                     label.set_font(tmp.write("Yeäh!!!".to_string()));
+                    None
                 },
-                _ => ()
+                _ => Some(msgc)
             }
 
         }))
@@ -580,15 +592,19 @@ pub fn example() {
     layers.push(
         Socket::new(list)
             .with_action_receive(Box::new(move |list: &mut List, msg: ActionMsg|{
+                let lmsg = msg.clone();
                 match (msg.sender_id.as_ref(), msg.msg) {
                     ("Delete", ActionMsgData::Click) => {
                         let _ = list.pop();
+                        return None;
                     },
                     ("Add", ActionMsgData::Click) => {
-                        list.push(Text::new(tmp.write("one more time!".to_string())))
+                        list.push(Text::new(tmp.write("one more time!".to_string())));
+                        return None;
                     }
                     _ => ()
                 }
+                Some(lmsg)
             }))
     );
 

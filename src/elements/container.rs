@@ -167,12 +167,17 @@ impl Element for Layers {
         res
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
+        let mut loc_msg = Some(msg);
         if !stop {
-            for layer in &mut self.layers {
-                layer.transmit_msg(msg.clone(), false);
+            let n = self.layers.len();
+            for i in 0..n {
+                if let Some(tmp) = loc_msg {
+                    loc_msg = self.layers[n-i-1].transmit_msg(tmp, false);
+                }
             }
         }
+        loc_msg
     }
 }
 
@@ -421,12 +426,16 @@ impl Element for List {
         Vec2{x,y}
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
+        let mut loc_msg = Some(msg);
         if !stop {
             for el in &mut self.elements {
-                el.transmit_msg(msg.clone(), false);
+                if let Some(tmp) = loc_msg {
+                    loc_msg = el.transmit_msg(tmp, false);
+                }
             }
         }
+        loc_msg
     }
 }
 
@@ -811,7 +820,8 @@ impl Element for Pad {
         Vec2{x,y}
     }
 
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
+        let mut loc_msg = Some(msg.clone());
         if !stop { 
             if self.crop {
                 match msg.msg {
@@ -820,16 +830,23 @@ impl Element for Pad {
                     | ActionMsgData::MousePressRight(x,y)
                     | ActionMsgData::MousePressMiddle(x,y) => {
                         if self.element.get_frame().inside(x as i32, y as i32) {
-                            self.element.transmit_msg(msg, false);
+                            if let Some(tmp) = loc_msg {
+                                loc_msg = self.element.transmit_msg(tmp, false);
+                            }
                         }
                     },
                     _ => {
-                        self.element.transmit_msg(msg, false);
+                        if let Some(tmp) = loc_msg {
+                            loc_msg = self.element.transmit_msg(tmp, false);
+                        }
                     }
                 }
             } else {
-                self.element.transmit_msg(msg, false);
+                if let Some(tmp) = loc_msg {
+                    loc_msg = self.element.transmit_msg(tmp, false);
+                }
             }
-         }
+        }
+        loc_msg
     }
 }

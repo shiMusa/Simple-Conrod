@@ -315,7 +315,7 @@ impl Element for Animation {
     fn get_max_size(&self) -> Vec2<i32> {
         self.element.get_max_size()
     }
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
         match msg.msg {
             ActionMsgData::Update => {
                 self.run();
@@ -324,7 +324,9 @@ impl Element for Animation {
         }
 
         if !stop {
-            self.element.transmit_msg(msg, false);
+            self.element.transmit_msg(msg, false)
+        } else {
+            Some(msg)
         }
     }
 }
@@ -389,7 +391,7 @@ pub struct Socket<E: Element> {
 
     is_setup: bool,
     element: Box<E>,
-    receive: Box<Fn(&mut E, ActionMsg)>,
+    receive: Box<Fn(&mut E, ActionMsg) -> Option<ActionMsg> >,
 }
 impl<E> Socket<E> where E: Element {
 
@@ -401,11 +403,11 @@ impl<E> Socket<E> where E: Element {
             max_size: Vec2 {x: i32::MAX, y: i32::MAX},
             is_setup: false,
             element,
-            receive: Box::new(|_,_|{}),
+            receive: Box::new(|_,msg|{Some(msg)}),
         })
     }
 
-    pub fn with_action_receive(mut self, fun: Box<Fn(&mut E, ActionMsg)>) -> Box<Self> {
+    pub fn with_action_receive(mut self, fun: Box<Fn(&mut E, ActionMsg) -> Option<ActionMsg> >) -> Box<Self> {
         self.receive = fun;
         Box::new(self)
     }
@@ -461,11 +463,14 @@ impl<E> Element for Socket<E> where E: Element {
     fn get_max_size(&self) -> Vec2<i32> {
         self.element.get_max_size()
     }
-    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
+    fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
         // first socket, then content
-        (self.receive)(&mut self.element, msg.clone());
+        let mut loc_msg = (self.receive)(&mut self.element, msg.clone());
         if !stop {
-            self.element.transmit_msg(msg, false);
+            if let Some(tmp) = loc_msg {
+                loc_msg = self.element.transmit_msg(tmp, false);
+            }
         }
+        loc_msg
     }
 }
