@@ -5,7 +5,6 @@ use elements::{*, action::*, basic::*, shared::*, structures::*};
 use std::sync::mpsc::Sender;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::fmt::{Debug, Formatter, Result};
 use std::i32;
 
 
@@ -97,8 +96,9 @@ impl Button {
         Box::new(self)
     }
 
-    pub fn with_graphic(self, std: Graphic) -> Box<Self> {
-        self.with_graphics(std.clone(),std.clone(),std)
+    pub fn with_graphic(mut self, std: Graphic) -> Box<Self> {
+        self.plane = Plane::new(std);
+        Box::new(self)
     }
 
     pub fn with_graphic_hover(mut self, hover: Graphic) -> Box<Self> {
@@ -344,13 +344,16 @@ pub struct Scroll {
 impl Scroll {
 
     pub fn new(alignment: ScrollAlignment, id: String, sender: Sender<ActionMsg>) -> Box<Self> {
-        Self::new_with_graphic(
-            Graphic::Color(conrod::color::LIGHT_BLUE), 
-            alignment, id, sender
+        Self::new_with_button(
+             Button::new()
+                .with_graphic(Graphic::Color(conrod::color::LIGHT_BLUE))
+                .with_id(id)
+                .with_sender(sender),
+            alignment
         )
     }
 
-    pub fn new_with_graphic(scrollbar_graphic: Graphic, alignment: ScrollAlignment, id: String, sender: Sender<ActionMsg>) -> Box<Self> {
+    pub fn new_with_button(scrollbar_button: Box<Button>, alignment: ScrollAlignment) -> Box<Self> {
         use std::i32;
 
         let scroll_trigger = Rc::new(RefCell::new(false));
@@ -358,23 +361,16 @@ impl Scroll {
 
         let scrollp = scroll_position.clone();
         let scrolltr = scroll_trigger.clone();
-        let scroll_bar = Socket::new(
-            Button::new()
-                .with_graphic(scrollbar_graphic)
-                .with_id(id)
-                .with_sender(sender)
-        ).with_action_receive(Box::new(move |button, msg|{
+        let scroll_bar = Socket::new(scrollbar_button)
+            .with_action_receive(Box::new(move |button, msg|{
             match msg.msg {
                 ActionMsgData::MousePressLeft(x,y) => {
                     if button.get_frame().inside(x as i32, y as i32) {
-                        println!("scroll pressed: {:?}", msg);
                         (*scrolltr.borrow_mut()) = true;
                     }
                 },
                 ActionMsgData::MouseDragLeft(x,y) => {
                     if *scrolltr.borrow() {
-                        let (s0,s1) = *scrollp.borrow();
-                        println!("scroll {} + {} dragged {}, {}",s0,s1,x,y);
                         match alignment {
                             ScrollAlignment::Horizontal => {
                                 (*scrollp.borrow_mut()).1 = x;
@@ -390,7 +386,6 @@ impl Scroll {
                     let triggered = *scrolltr.borrow();
                     if triggered {
                         let delta = (*scrollp.borrow()).1;
-                        println!("scroll dragging stopped. adding {}", delta);
                         (*scrollp.borrow_mut()).0 += delta;
                         (*scrollp.borrow_mut()).1 = 0.0;
                         (*scrolltr.borrow_mut()) = false;
@@ -523,11 +518,11 @@ impl Scroll {
 
                 if sp < 0.0 {
                     sp = 0.0;
-                    (*self.scroll_position.borrow_mut()) = (0.0,0.0);
+                    //(*self.scroll_position.borrow_mut()) = (0.0,0.0);
                 }
                 if sp > (1.0-frac) * s.y as f64 {
                     sp = (1.0-frac) * s.y as f64;
-                    (*self.scroll_position.borrow_mut()) = (sp,0.0);
+                    //(*self.scroll_position.borrow_mut()) = (sp,0.0);
                 }
 
                 let scroll = (sp as f64)/(s.x as f64);
@@ -565,11 +560,11 @@ impl Scroll {
 
                 if sp > 0.0 {
                     sp = 0.0;
-                    (*self.scroll_position.borrow_mut()) = (0.0,0.0);
+                    //(*self.scroll_position.borrow_mut()) = (0.0,0.0);
                 }
                 if sp < -(1.0-frac) * s.y as f64 {
                     sp = -(1.0-frac) * s.y as f64;
-                    (*self.scroll_position.borrow_mut()) = (sp,0.0);
+                    //(*self.scroll_position.borrow_mut()) = (sp,0.0);
                 }
 
                 let scroll = (sp as f64)/(s.y as f64);
@@ -603,17 +598,6 @@ impl Scroll {
             },
         }
         if DEBUG { println!("... rescaling done.");}
-    }
-}
-
-impl ActionSendable for Scroll {
-    fn with_id(mut self, id: String) -> Box<Self> {
-        self.id = id;
-        Box::new(self)
-    }
-    fn with_sender(mut self, sender: Sender<ActionMsg>) -> Box<Self> {
-        self.senders.push(sender);
-        Box::new(self)
     }
 }
 

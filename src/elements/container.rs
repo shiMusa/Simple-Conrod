@@ -536,8 +536,6 @@ impl Pad {
         self.frame = frame;
         use self::PadAlignment::*;
 
-        let min = self.element.get_min_size();
-
         // map relative values to absolute pixel
         let s = self.frame.size();
 
@@ -566,9 +564,15 @@ impl Pad {
             }
         };
 
+        let min = self.element.get_min_size();
+        let max = self.element.get_max_size();
+
         if limit {
             if v.x < min.x { v.x = min.x; }
             if v.y < min.y { v.y = min.y; }
+            
+            if v.x > max.x {v.x = max.x;}
+            if v.y > max.y {v.y = max.y;}
         }
 
         let center = self.frame.center();
@@ -795,16 +799,12 @@ impl Element for Pad {
     }
 
     fn get_min_size(&self) -> Vec2<i32> {
-        // TODO not yet correct. Need to consider relative size as well
-        // TODO ... maybe not?
         let min = self.element.get_min_size();
         let x = if min.x > self.min_size.x {min.x} else {self.min_size.x};
         let y = if min.y > self.min_size.y {min.y} else {self.min_size.y};
         Vec2{x,y}
     }
     fn get_max_size(&self) -> Vec2<i32> {
-        // TODO not yet correct. Need to consider relative size as well
-        // TODO ... maybe not?
         let max = self.element.get_max_size();
         let x = if max.x > self.max_size.x {max.x} else {self.max_size.x};
         let y = if max.y > self.max_size.y {max.y} else {self.max_size.y};
@@ -812,7 +812,24 @@ impl Element for Pad {
     }
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) {
-        // ! need to stop transmitting mouse msgs if cropped ////////////////////////////////////////////////
-        if !stop { self.element.transmit_msg(msg, false); }
+        if !stop { 
+            if self.crop {
+                match msg.msg {
+                    ActionMsgData::Mouse(x,y)
+                    | ActionMsgData::MousePressLeft(x,y)
+                    | ActionMsgData::MousePressRight(x,y)
+                    | ActionMsgData::MousePressMiddle(x,y) => {
+                        if self.element.get_frame().inside(x as i32, y as i32) {
+                            self.element.transmit_msg(msg, false);
+                        }
+                    },
+                    _ => {
+                        self.element.transmit_msg(msg, false);
+                    }
+                }
+            } else {
+                self.element.transmit_msg(msg, false);
+            }
+         }
     }
 }
