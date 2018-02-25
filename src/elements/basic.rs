@@ -6,8 +6,6 @@ use conrod;
 
 use elements::{*, action::*};
 
-use std::sync::mpsc::{Sender};
-
 
 
 
@@ -63,7 +61,7 @@ impl Element for Empty {
     fn set_parent_widget(&mut self, parent: conrod::widget::id::Id) {
         self.parent = Some(parent);
     }
-    fn set_floating(&mut self, floating: bool) {}
+    fn set_floating(&mut self, _floating: bool) {}
 
     fn build_window(&self, _ui: &mut conrod::UiCell, _ressources: &WindowRessources) {}
 

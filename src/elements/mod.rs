@@ -9,11 +9,8 @@ pub mod structures;
 
 use conrod;
 use conrod::backend::glium::glium::{self, Surface};
-use conrod::position::{Rect, Range};
+use conrod::position::Rect;
 use time;
-use num::{Num, NumCast};
-use std::ops::{Add, Sub, Mul, Div};
-use std::fmt::{Debug, Formatter, Result};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::collections::HashMap;
 use std::path::Path;
@@ -500,7 +497,6 @@ impl Window {
                                             _ => (),
                                         }
                                     },
-                                    _ => (),
                                 }
                             }
                             WindowEvent::CursorMoved {

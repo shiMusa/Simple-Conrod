@@ -150,7 +150,9 @@ pub fn example5() {
                     .with_id(s.clone())
                     .with_sender(sender.clone())
             ).with_action_receive(Box::new(move |_,msg|{
-                if msg.sender_id == s {
+                if msg.sender_id == s 
+                    && ( msg.msg == ActionMsgData::Press
+                        || msg.msg == ActionMsgData::Click ) {
                     println!("{:?}",msg);
                 }
             })),
@@ -192,7 +194,7 @@ Y88888P YP    YP          VP
 
 pub fn example4() {
 
-    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    let (_sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
 
     // construct window
@@ -407,7 +409,7 @@ pub fn expample2() {
         "NotoSans-Italic".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
     );
-    let font_italic = Font::new("NotoSans-Italic".to_string(), 42, conrod::color::BLACK);
+    let _font_italic = Font::new("NotoSans-Italic".to_string(), 42, conrod::color::BLACK);
     window.add_font(
         "NotoSans-Bold".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Bold.ttf")
