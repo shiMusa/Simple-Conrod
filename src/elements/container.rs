@@ -778,9 +778,11 @@ impl Element for Pad {
             let mut rect = widget::Rectangle::fill_with(
                 [frame.width() as f64, frame.height() as f64], conrod::color::Color::Rgba(0.0,0.0,0.0,0.0)
             ).x_y(c.x as f64, c.y as f64);
+
             if let Some(parent) = self.parent {
                 rect = rect.parent(parent);
             }
+            
             if self.crop {
                 rect = rect.crop_kids();
             }
@@ -822,6 +824,8 @@ impl Element for Pad {
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
         let mut loc_msg = Some(msg.clone());
+
+        let msgc = msg.clone();
         if !stop { 
             if self.crop {
                 match msg.msg {
@@ -833,6 +837,14 @@ impl Element for Pad {
                             if let Some(tmp) = loc_msg {
                                 loc_msg = self.element.transmit_msg(tmp, false);
                             }
+                        } else {
+                            let _ = self.element.transmit_msg(
+                                ActionMsg{
+                                    sender_id: msgc.sender_id.clone(),
+                                    msg: ActionMsgData::MouseGone
+                                },
+                                false
+                            );
                         }
                     },
                     _ => {

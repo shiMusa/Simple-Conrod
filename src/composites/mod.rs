@@ -180,7 +180,8 @@ impl Element for Button {
         if let Some(ref ids) = self.button_ids {
             let mut canvas = widget::canvas::Canvas::new()
                 .border(0f64)
-                .rgba(0.0,0.0,0.0,0.0);
+                .rgba(0.0,0.0,0.0,0.0)
+                .floating(self.floating);
             if let Some(parent) = self.parent {
                 canvas = canvas.parent(parent);
             }
@@ -231,7 +232,20 @@ impl Element for Button {
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
         let mut used_up = false;
+        let id = msg.sender_id.clone();
         match msg.msg {
+            ActionMsgData::MouseGone => {
+                self.is_hover = false;
+                if self.is_click {
+                    self.is_click = false;
+                    for sender in &self.senders {
+                        let _ = sender.send(ActionMsg{
+                            sender_id: self.id.clone(),
+                            msg: ActionMsgData::Release
+                        });
+                    }
+                }
+            },
             ActionMsgData::Mouse(x,y) => {
                 if self.frame.inside(x as i32,y as i32) {
                     for sender in &self.senders {
@@ -251,7 +265,15 @@ impl Element for Button {
                             });
                         }
                     }
-                    self.is_hover = false;
+                    if self.is_hover {
+                        for sender in &self.senders {
+                            let _ = sender.send(ActionMsg{
+                                sender_id: self.id.clone(),
+                                msg: ActionMsgData::HoverGone
+                            });
+                        }
+                        self.is_hover = false;
+                    }
                     self.is_click = false;
                 }
             },
@@ -288,7 +310,10 @@ impl Element for Button {
             let _ = self.plane.transmit_msg(msg.clone(), stop);
             let _ = self.plane_hover.transmit_msg(msg.clone(), stop);
             let _ = self.plane_click.transmit_msg(msg, stop);
-            None
+            Some(ActionMsg{
+                sender_id: self.id.clone(),
+                msg: ActionMsgData::MouseGone
+            })
         } else {
             Some(msg)
         }
@@ -332,6 +357,7 @@ pub enum ScrollAlignment {
 
 
 pub struct Scroll {
+    id: String,
     ids: Option<ScrollIds>,
     parent: Option<conrod::widget::id::Id>,
 
@@ -353,7 +379,8 @@ impl Scroll {
 
     pub fn new(alignment: ScrollAlignment, id: String, sender: Sender<ActionMsg>) -> Box<Self> {
         Self::new_with_button(
-             Button::new()
+            id.clone(),
+            Button::new()
                 .with_graphic(Graphic::Color(conrod::color::LIGHT_BLUE))
                 .with_id(id)
                 .with_sender(sender),
@@ -361,7 +388,7 @@ impl Scroll {
         )
     }
 
-    pub fn new_with_button(scrollbar_button: Box<Button>, alignment: ScrollAlignment) -> Box<Self> {
+    pub fn new_with_button(id: String, scrollbar_button: Box<Button>, alignment: ScrollAlignment) -> Box<Self> {
         use std::i32;
 
         let scroll_trigger = Rc::new(RefCell::new(false));
@@ -408,6 +435,7 @@ impl Scroll {
         }));
 
         Box::new(Scroll {
+            id,
             ids: None,
             parent: None,
             elements: Vec::new(),
@@ -729,7 +757,8 @@ impl Element for Scroll {
         if *self.scroll_trigger.borrow() {
             self.rescale_elements();
         }
-        if !stop {
+        if !stop && !*self.scroll_trigger.borrow(){
+            let id = self.id.clone();
             match msg.msg {
                 ActionMsgData::Mouse(x,y)
                 | ActionMsgData::MousePressLeft(x,y)
@@ -737,9 +766,16 @@ impl Element for Scroll {
                 | ActionMsgData::MousePressMiddle(x,y) => {
                     if self.frame.inside(x as i32, y as i32) {
                         for el in &mut self.elements {
-                            if let Some(tmp) = loc_msg {
-                                loc_msg = el.transmit_msg(tmp, false);
+                            if let Some(tmp) = loc_msg.clone() {
+                                el.transmit_msg(tmp, false);
                             }
+                        }
+                    } else {
+                        for el in &mut self.elements {
+                            el.transmit_msg(ActionMsg{
+                                sender_id: id.clone(),
+                                msg: ActionMsgData::MouseGone
+                            }, false);
                         }
                     }
                 },

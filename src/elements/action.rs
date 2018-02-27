@@ -44,6 +44,7 @@ use std::sync::mpsc::{Sender};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ActionMsgData {
+    MouseGone,
     Mouse(f64,f64),
     MousePressLeft(f64,f64),
     MousePressRight(f64,f64),
@@ -59,6 +60,7 @@ pub enum ActionMsgData {
     Press,
     Release,
     Hover,
+    HoverGone,
     Text(String),
     U8(u8),
     U16(u16),
@@ -238,33 +240,29 @@ impl Animateable for Animation {
     }
 
     fn run(&mut self) {
-        let mut do_reset = false;
-        let tau = self.duration;
-        let t = self.time();
-        let t = if self.running && t < self.duration {
-            t
-        } else {
-            self.running = false;
-            do_reset = true;
-            tau
-        };
+        if self.running {
+            let tau = self.duration;
+            let t = self.time();
+            let t = if t < tau {
+                t
+            } else {
+                tau
+            };
 
-        if let Some(ref f) = self.size_animation {
-            self.element.animate_size(f.calc(t,tau));
+            if let Some(ref f) = self.size_animation {
+                self.element.animate_size(f.calc(t,tau));
+            }
+            if let Some(ref f) = self.position_animation {
+                self.element.animate_position(f.calc(t,tau));
+            }
         }
-        if let Some(ref f) = self.position_animation {
-            self.element.animate_position(f.calc(t,tau));
-        }
-
-        if do_reset { self.element.reset() }
     }
 
     fn reset(&mut self) {
-        if !self.running {
-            // TODO not ideal. need to manage individual floating property
-            self.element.set_floating(false);
-            self.element.reset();
-        }
+        // TODO not ideal. need to manage individual floating property
+        self.element.set_floating(false);
+        self.element.reset();
+        self.running = false;
     }
 }
 

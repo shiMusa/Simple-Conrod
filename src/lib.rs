@@ -114,8 +114,21 @@ pub fn example5() {
     impl SizeAnimation for AnimHover {
         fn calc(&self, t: f64, duration: f64) -> (Dim, Dim) {
             use std::f64;
-            let tau = t/1000.0 * f64::consts::PI;
-            let f = Dim::Relative( 0.25 * tau.atan()/(f64::consts::PI/2.0) );
+            let mut tau = t/duration * f64::consts::PI / 2.0;
+            if tau > 1.0 { tau = 1.0; }
+            let f = Dim::Relative( 0.25 * tau.sin() * tau.sin() );
+            (f,f)
+        }
+    }
+
+    pub struct AnimHoverGone;
+    impl SizeAnimation for AnimHoverGone {
+        fn calc(&self, t: f64, duration: f64) -> (Dim, Dim) {
+            use std::f64;
+            let mut tau = t/duration * f64::consts::PI / 2.0;
+            if tau > 1.0 { tau = 1.0; }
+            tau = f64::consts::PI / 2.0 - tau;
+            let f = Dim::Relative( 0.25 * tau.sin() * tau.sin() );
             (f,f)
         }
     }
@@ -138,6 +151,10 @@ pub fn example5() {
         "JapaneseFan".to_string(),
         &assets.join("images/japanese-fan.png")
     );
+    window.add_image(
+        "Cherry".to_string(),
+        &assets.join("images/cherry-blossoms.jpg")
+    );
 
     let mut layers = Layers::new();
 
@@ -146,7 +163,7 @@ pub fn example5() {
 
 
     let plane = Plane::new(Graphic::Texture(
-        Texture::new("JapaneseFan".to_string())
+        Texture::new("Cherry".to_string())
             .with_mode(TextureMode::FitMax)
     ));
     layers.push(plane);
@@ -161,42 +178,53 @@ pub fn example5() {
         sender.clone()
     );
 
+    let button_graphic = Graphic::Texture(
+        Texture::new("JapaneseFan".to_string())
+            .with_mode(TextureMode::FitMax)
+    );
+
     for i in 0..10 {
         let s = format!("Button {}",i);
-        let sc = s.clone();
         let mut pad = Pad::new(
-            Socket::new(
-                Button::new()
-                    .with_font(font.write( s.clone() ))
-                    .with_id(s.clone())
-                    .with_sender(sender.clone())
-            ).with_action_receive(Box::new(move |_,msg|{
-                if msg.sender_id == sc
-                    && ( msg.msg == ActionMsgData::Press
-                        || msg.msg == ActionMsgData::Click ) {
-                    println!("{:?}",msg);
-                }
-                Some(msg)
-            })),
+            Button::new()
+                .with_font(font.write( s.clone() ))
+                .with_graphics(
+                    button_graphic.clone(),
+                    button_graphic.clone(),
+                    button_graphic.clone()
+                )
+                .with_id(s.clone())
+                .with_sender(sender.clone()),
             PadAlignment::Center,
-            PadElementSize::Negative(Dim::Absolute(25), Dim::Absolute(25))
+            PadElementSize::Negative(Dim::Absolute(50), Dim::Absolute(25))
         );
         pad.set_min_size(Vec2{x: 400, y: 150});
 
         let animation = Animation::new(pad)
-            .with_duration(50000.0)
+            .with_duration(150.0)
             .with_size_animation(Box::new(AnimHover))
             .with_floating(true);
 
         let socket = Socket::new(animation)
-            .with_action_receive(Box::new(move |ani: &mut Animation, amsg: ActionMsg|{   
-                if amsg.msg == ActionMsgData::Hover && amsg.sender_id == s {
-                    println!("{}",s);
-                    ani.start();
-                    None
-                } else {
-                    Some(amsg)
+            .with_action_receive(Box::new(move |ani: &mut Animation, amsg: ActionMsg|{ 
+                let msgc = amsg.clone();
+                if amsg.sender_id == s {
+                    println!("{:?}", amsg);
+                    match amsg.msg {
+                        ActionMsgData::Hover => {
+                            ani.start();
+                        },
+                        ActionMsgData::HoverGone => {
+                            ani.reset();
+                        },
+                        _ => ()
+                    }
                 }
+                if amsg.sender_id == "Scroll".to_string() 
+                    && amsg.msg == ActionMsgData::MouseGone {
+                    ani.reset();
+                }
+                Some(msgc)
             }
         ));
 
