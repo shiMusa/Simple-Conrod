@@ -133,12 +133,9 @@ pub fn example5() {
         }
     }
 
-    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-
     // construct window
     let mut window = Window::new("Scroll Test".to_string(), 800,800);
-    window.add_receiver(receiver);
+    let sender = window.create_sender();
 
     // setup timer for continuous refresh of window
     let (timer_sender, timer_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
@@ -146,36 +143,33 @@ pub fn example5() {
     let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
     window.add_sender(timer_sender);
 
+
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
     // * fonts -----------------------------------------------------------
-    window.add_font(
-        "NotoSans-Regular".to_string(),
-        &assets.join("fonts/NotoSans/NotoSans-Regular.ttf")
-    );
-    let font = Font::new("NotoSans-Regular".to_string())
-        .with_size(Dim::Relative(0.05))
+    let font = window.add_font(
+        "NotoSans-Italic".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+        ).with_size(Dim::Relative(0.05))
         .with_wrapping(FontWrapping::Character);
 
-
     // * images ----------------------------------------------------------
-    window.add_image(
+    let fans = window.add_image(
         "JapaneseFan".to_string(),
         &assets.join("images/japanese-fan.png")
     );
-    window.add_image(
+    let cherry = window.add_image(
         "Cherry".to_string(),
         &assets.join("images/cherry-blossoms.jpg")
     );
 
+
+
+
     let mut layers = Layers::new();
-
-
     // * layer 0 ---------------------------------------------------------
 
 
-    let plane = Plane::new(Graphic::Texture(
-        Texture::new("Cherry".to_string())
-            .with_mode(TextureMode::FitMax)
-    ));
+    let plane = Plane::new(Graphic::Texture(cherry));
     layers.push(plane);
 
 
@@ -188,10 +182,7 @@ pub fn example5() {
         sender.clone()
     );
 
-    let button_graphic = Graphic::Texture(
-        Texture::new("JapaneseFan".to_string())
-            .with_mode(TextureMode::FitMax)
-    );
+    let button_graphic = Graphic::Texture(fans);
 
     for i in 0..10 {
         let s = format!("Button {}",i);
@@ -208,7 +199,7 @@ pub fn example5() {
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(50), Dim::Absolute(25))
         );
-        pad.set_min_size(Vec2{x: 100, y: 100});
+        pad.set_min_size(Vec2{x: 200, y: 200});
 
         let animation = Animation::new(pad)
             .with_duration(150.0)
@@ -272,24 +263,20 @@ Y88888P YP    YP          VP
 
 pub fn example4() {
 
-    let (_sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-
     // construct window
     let mut window = Window::new("Animation Test".to_string(), 800,800);
-    window.add_receiver(receiver);
+    let _ = window.create_sender();
 
-    window.add_image(
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    let fans = window.add_image(
         "JapaneseFan".to_string(),
         &assets.join("images/japanese-fan.png")
     );
 
     let mut layers = Layers::new();
 
-    let plane = Plane::new(Graphic::Texture(
-        Texture::new("JapaneseFan".to_string())
-            .with_mode(TextureMode::FitMax)
-    ));
+    let plane = Plane::new(Graphic::Texture(fans));
 
     let pad = Pad::new(
         plane.clone(),
@@ -359,18 +346,24 @@ pub fn example3() {
         }
     }
 
-    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    // construct window
+    let mut window = Window::new("Animation Test".to_string(), 800,800);
+    let sender = window.create_sender();
+
 
     // setup timer for continuous refresh of window
     let (timer_sender, timer_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
         = mpsc::channel();
-    let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
-
-    // construct window
-    let mut window = Window::new("Animation Test".to_string(), 800,800);
-    let font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
-    window.add_receiver(receiver);
+    let _ = Timer::new(sender.clone(), timer_receiver, 120.0);
     window.add_sender(timer_sender);
+
+
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+
+    let font = window.add_font(
+        "NotoSans-Regular".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+    ).with_size(Dim::Absolute(42));
 
     let mut scroll = Scroll::new(
         ScrollAlignment::Vertical,
@@ -470,42 +463,29 @@ pub fn expample2() {
         }
     }
 
-
-    let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+    // construct window
+    let mut window = Window::new("Animation Test".to_string(), 800,800);
+    let sender = window.create_sender();
 
     // setup timer for continuous refresh of window
     let (timer_sender, timer_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
         = mpsc::channel();
     let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
-
-    // construct window
-    let mut window = Window::new("Animation Test".to_string(), 800,800);
-    let font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
-    window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
 
-    window.add_font(
-        "NotoSans-Italic".to_string(),
+    let font = window.add_font(
+        "NotoSans-Regular".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
-    );
-    let _font_italic = Font::new("NotoSans-Italic".to_string()).with_size(Dim::Absolute(42));
-    window.add_font(
-        "NotoSans-Bold".to_string(),
-        &assets.join("fonts/NotoSans/NotoSans-Bold.ttf")
-    );
-    window.add_font(
-        "NotoSans-BoldItalic".to_string(),
-        &assets.join("fonts/NotoSans/NotoSans-BoldItalic.ttf")
-    );
+    ).with_size(Dim::Absolute(42));
 
-    window.add_image(
+    let logo = window.add_image(
         "RustLogo_hover".to_string(),
         &assets.join("images/rust_hover.png")
     );
 
-    window.add_image(
+    let fans = window.add_image(
         "JapaneseFan".to_string(),
         &assets.join("images/japanese-fan.png")
     );
@@ -514,17 +494,12 @@ pub fn expample2() {
 
     let mut layers = Layers::new();
 
-    layers.push(Plane::new(Graphic::Texture(
-        Texture::new("JapaneseFan".to_string())
-            .with_mode(TextureMode::FitMax)
-    )));
+    layers.push(Plane::new(Graphic::Texture(fans)));
 
 
 
     let pad = Pad::new(Button::new()
-        .with_graphic(Graphic::Texture(
-            Texture::new("RustLogo_hover".to_string())
-            ))
+        .with_graphic(Graphic::Texture(logo))
         .with_font(font.write("Press".to_string()))
         .with_id("testbutton".to_string())
         .with_sender(sender.clone()),
@@ -581,9 +556,15 @@ Y88888P YP    YP
 pub fn example() {
 
     let mut window = Window::new("Container".to_string(), 800, 800);
-    let mut font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
-    let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
-    window.add_receiver(base_receiver);
+    let base_sender = window.create_sender();
+
+    // add font
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+    let mut font = window.add_font(
+        "NotoSans-Regular".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
+    ).with_size(Dim::Absolute(42));
+
 
     let mut layers = Layers::new();
 

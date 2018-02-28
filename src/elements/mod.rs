@@ -235,20 +235,31 @@ impl Window {
 
 
 
-    pub fn add_font(&mut self, id: String, path: &Path) {
-        self.ressources.add_font(
-            &mut self.ui,
-            id, 
-            path
-        );
+
+    pub fn create_sender(&mut self) -> Sender<ActionMsg> {
+        let (sender, receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
+        self.add_receiver(receiver);
+        sender
     }
 
-    pub fn add_image(&mut self, id: String, path: &Path) {
-        self.ressources.add_image(
-            &mut self.display, 
-            id, 
+
+
+    pub fn add_font(&mut self, id: String, path: &Path) -> Font {
+        self.ressources.add_font(
+            &mut self.ui,
+            id.clone(), 
             path
         );
+        Font::new(id)
+    }
+
+    pub fn add_image(&mut self, id: String, path: &Path) -> Texture {
+        self.ressources.add_image(
+            &mut self.display, 
+            id.clone(), 
+            path
+        );
+        Texture::new(id).with_mode(TextureMode::FitMax)
     }
 
 
@@ -290,7 +301,7 @@ impl Window {
             .with_dimensions(width, height);
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
-            .with_multisampling(4);
+            .with_multisampling(8);
         let display = glium::Display::new(
             window, context, &events_loop
         ).unwrap();
