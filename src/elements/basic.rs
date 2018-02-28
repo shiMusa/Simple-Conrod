@@ -354,7 +354,7 @@ impl Element for Text {
     }
 
     fn build_window(&self, ui: &mut conrod::UiCell, ressources: &WindowRessources) {
-        use conrod::{widget, Positionable, Colorable, Widget};
+        use conrod::{widget, Positionable, Colorable, Widget, Sizeable};
 
         if let Some(ref ids) = self.ids {
             let c = self.frame.center() - self.global_center;
@@ -363,8 +363,24 @@ impl Element for Text {
             let mut label = widget::Text::new(&text)
                 .x_y(c.x as f64, c.y as f64)
                 .color(self.font.get_color())
-                .font_size(self.font.get_size())
                 .floating(self.floating);
+            match self.font.get_size() {
+                Dim::Absolute(s) => label = label.font_size(s as u32),
+                Dim::Relative(rs) => {
+                    let gc = self.global_center;
+                    let min = if gc.x > gc.y { 2.0 * gc.y as f64 } else { 2.0 * gc.x as f64 };
+                    label = label.font_size( (min * rs) as u32 )
+                }
+            }
+            match self.font.get_justification() {
+                FontJustification::Left => label = label.left_justify(),
+                FontJustification::Center => label = label.center_justify(),
+                FontJustification::Right => label = label.right_justify(),
+            }
+            match self.font.get_wrapping() {
+                FontWrapping::Word => label = label.wrap_by_word(),
+                FontWrapping::Character => label = label.wrap_by_character(),
+            }
 
             let fnt = ressources.font(&self.font.get_font_id());
             if let Some(fnt) = fnt {
@@ -372,7 +388,7 @@ impl Element for Text {
             }
 
             if let Some(parent) = self.parent {
-                label = label.parent(parent);
+                label = label.w_of(parent).parent(parent);
             }
 
             label.set(ids.text, ui);

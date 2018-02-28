@@ -575,6 +575,8 @@ impl Pad {
 
         let min = self.element.get_min_size();
         let max = self.element.get_max_size();
+        //println!("pad element min {:?}", min);
+        //println!("pad element max {:?}", max);
 
         if limit {
             if v.x < min.x { v.x = min.x; }
@@ -797,6 +799,7 @@ impl Element for Pad {
     }
 
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        //println!("pad set frame to {:?}", frame);
         self.rescale(frame, window_center, true);
         self.update_original_pad_size();
     }

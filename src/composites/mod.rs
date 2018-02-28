@@ -364,6 +364,7 @@ pub struct Scroll {
     elements: Vec<Box<Element>>,
     alignment: ScrollAlignment,
     scroll_bar: Box<Socket<Button>>,
+    scroll_bar_bg: Box<Socket<Button>>,
     scroll_bar_width: i32,
     scroll_position: Rc<RefCell<(f64,f64)>>,
     scroll_trigger: Rc<RefCell<bool>>,
@@ -380,6 +381,7 @@ impl Scroll {
     pub fn new(alignment: ScrollAlignment, id: String, sender: Sender<ActionMsg>) -> Box<Self> {
         Self::new_with_button(
             id.clone(),
+            sender.clone(),
             Button::new()
                 .with_graphic(Graphic::Color(conrod::color::LIGHT_BLUE))
                 .with_id(id)
@@ -388,7 +390,7 @@ impl Scroll {
         )
     }
 
-    pub fn new_with_button(id: String, scrollbar_button: Box<Button>, alignment: ScrollAlignment) -> Box<Self> {
+    pub fn new_with_button(id: String, sender: Sender<ActionMsg>, scrollbar_button: Box<Button>, alignment: ScrollAlignment) -> Box<Self> {
         use std::i32;
 
         let scroll_trigger = Rc::new(RefCell::new(false));
@@ -431,7 +433,51 @@ impl Scroll {
                 _ => ()
             }
             Some(msg)
+        }));
 
+
+        let bg_graphic = Graphic::Color(conrod::color::rgba(0.0, 0.0, 0.0, 0.75));
+        let scrollp2 = scroll_position.clone();
+        let scrollt2 = scroll_trigger.clone();
+
+        let scroll_bar_bg = Socket::new(
+                Button::new()
+                    .with_graphics(bg_graphic.clone(), bg_graphic.clone(), bg_graphic)
+                    .with_id(format!("{}_bg", id))
+                    .with_sender(sender.clone())
+            )
+            .with_action_receive(Box::new(move |button, msg|{
+            match msg.msg {
+                ActionMsgData::MousePressLeft(x,y) => {
+                    if button.get_frame().inside(x as i32, y as i32) {
+                        match alignment {
+                            ScrollAlignment::Horizontal => {
+                                let x0 = button.get_frame().p0.x;
+                                (*scrollp2.borrow_mut()).0 = x - x0 as f64;
+                                (*scrollt2.borrow_mut()) = true;
+                            },
+                            ScrollAlignment::Vertical => {
+                                let y0 = button.get_frame().p1.y;
+                                //println!("scroll bar bg {}", y-y0 as f64);
+                                (*scrollp2.borrow_mut()).0 = y - y0 as f64;
+                                (*scrollt2.borrow_mut()) = true;
+                            }
+                        }
+                        return None;
+                    }
+                },
+                ActionMsgData::Click => {
+                    let triggered = *scrollt2.borrow();
+                    if triggered {
+                        let delta = (*scrollp2.borrow()).1;
+                        (*scrollp2.borrow_mut()).0 += delta;
+                        (*scrollp2.borrow_mut()).1 = 0.0;
+                        (*scrollt2.borrow_mut()) = false;
+                    }
+                }
+                _ => ()
+            }
+            Some(msg)
         }));
 
         Box::new(Scroll {
@@ -441,6 +487,7 @@ impl Scroll {
             elements: Vec::new(),
             alignment,
             scroll_bar,
+            scroll_bar_bg,
             scroll_bar_width: 15,
             scroll_position,
             scroll_trigger,
@@ -501,28 +548,24 @@ impl Scroll {
     }
     fn get_elements_max_size(&self) -> Vec2<i32> {
         use std::i32;
-        let mut max = Vec2::zero();
+        let mut max = Vec2{
+            x: i32::MAX,
+            y: i32::MAX,
+        };
+
         for el in &self.elements {
             let tmp = el.get_max_size();
             match self.alignment {
                 ScrollAlignment::Horizontal => {
-                    max.x = if tmp.x == i32::MAX {
-                        i32::MAX
-                    } else {
-                        max.x + tmp.x
-                    };
                     if max.y > tmp.y { max.y = tmp.y; }
                 },
                 ScrollAlignment::Vertical   => {
-                    max.y = if tmp.y == i32::MAX {
-                        i32::MAX
-                    } else {
-                        max.y + tmp.y
-                    };
-                    if max.x < tmp.x { max.x = tmp.x; }
+                    if max.x > tmp.x { max.x = tmp.x; }
                 },
             }
         }
+        if max.x > self.max_size.x { max.x = self.max_size.x; }
+        if max.y > self.max_size.y { max.y = self.max_size.y; }
         max
     }
 
@@ -560,13 +603,13 @@ impl Scroll {
                     sp = 0.0;
                     //(*self.scroll_position.borrow_mut()) = (0.0,0.0);
                 }
-                if sp > (1.0-frac) * s.y as f64 {
-                    sp = (1.0-frac) * s.y as f64;
+                if sp > (1.0-frac) * s.x as f64 {
+                    sp = (1.0-frac) * s.x as f64;
                     //(*self.scroll_position.borrow_mut()) = (sp,0.0);
                 }
 
                 let scroll = (sp as f64)/(s.x as f64);
-                let delta = (scroll * self.get_elements_min_size().x as f64) as i32;
+                let delta = -(scroll * self.get_elements_min_size().x as f64) as i32;
 
                 let bar_shift = if self.is_inside_area() {0} else {self.scroll_bar_width};
 
@@ -578,6 +621,7 @@ impl Scroll {
                         p0: Vec2{x: delta + xp + self.frame.p0.x, y: self.frame.p0.y + bar_shift},
                         p1: Vec2{x: delta + xp + min + self.frame.p0.x, y: self.frame.p1.y}
                     }, self.global_center);
+                    //println!("{:?} el frame {:?}", self.frame, el.get_frame());
                     xp += min;
                 }
 
@@ -591,6 +635,17 @@ impl Scroll {
                         p1: Vec2 {
                             y: self.frame.p0.y + self.scroll_bar_width,
                             x: (scroll * s.x as f64) as i32 + self.frame.p0.x + bar,
+                        }
+                    },
+                    self.global_center
+                );
+
+                self.scroll_bar_bg.set_frame(
+                    Frame{
+                        p0: self.frame.p0,
+                        p1: Vec2 {
+                            y: self.frame.p0.y + self.scroll_bar_width,
+                            x: self.frame.p1.x,
                         }
                     },
                     self.global_center
@@ -624,6 +679,7 @@ impl Scroll {
                         p0: Vec2{x: self.frame.p0.x, y: delta + self.frame.p1.y - yp - min},
                         p1: Vec2{x: self.frame.p1.x - bar_shift, y: delta + self.frame.p1.y - yp}
                     }, self.global_center);
+                    //println!("{:?} el frame {:?}", self.frame, el.get_frame());
                     yp += min;
                 }
 
@@ -638,6 +694,17 @@ impl Scroll {
                             x: self.frame.p1.x,
                             y: (scroll * s.y as f64) as i32 + self.frame.p1.y,
                         }
+                    },
+                    self.global_center
+                );
+
+                self.scroll_bar_bg.set_frame(
+                    Frame{
+                        p0: Vec2 {
+                            x: self.frame.p1.x - self.scroll_bar_width,
+                            y: self.frame.p0.y
+                        },
+                        p1: self.frame.p1
                     },
                     self.global_center
                 );
@@ -663,6 +730,9 @@ impl Element for Scroll {
         self.scroll_bar.set_parent_widget(ids.scroll);
         self.scroll_bar.setup(ui);
 
+        self.scroll_bar_bg.set_parent_widget(ids.scroll);
+        self.scroll_bar_bg.setup(ui);
+
         self.ids = Some(ids);
         self.is_setup = true;
     }
@@ -672,6 +742,7 @@ impl Element for Scroll {
             if !el.is_setup() { setup = false; }
         }
         if !self.scroll_bar.is_setup() { setup = false; }
+        if !self.scroll_bar_bg.is_setup() { setup = false; }
         if DEBUG { println!("Scroll is setup? {}", setup); }
         setup
     }
@@ -708,6 +779,7 @@ impl Element for Scroll {
         }
 
         if !self.is_inside_area() {
+            self.scroll_bar_bg.build_window(ui, ressources);
             self.scroll_bar.build_window(ui, ressources);
         }
     }
@@ -716,6 +788,7 @@ impl Element for Scroll {
         self.frame
     }
     fn set_frame(&mut self, frame: Frame<i32>, window_center: Vec2<i32>) {
+        //println!("scroll set frame to {:?}", frame);
         self.global_center = window_center;
         self.frame = frame;
         self.rescale_elements();
@@ -730,8 +803,18 @@ impl Element for Scroll {
 
     fn get_min_size(&self) -> Vec2<i32> {
         let min = self.get_elements_min_size();
-        let x = if min.x < self.min_size.x {min.x} else {self.min_size.x};
-        let y = if min.y < self.min_size.y {min.y} else {self.min_size.y};
+        let x; // = if min.x < self.min_size.x {min.x} else {self.min_size.x};
+        let y; // = if min.y < self.min_size.y {min.y} else {self.min_size.y};
+        match self.alignment {
+            ScrollAlignment::Horizontal => {
+                x = self.min_size.x;
+                y = if min.y > self.min_size.y {min.y} else {self.min_size.y};
+            },
+            ScrollAlignment::Vertical => {
+                y = self.min_size.y;
+                x = if min.x > self.min_size.x {min.x} else {self.min_size.x};
+            }
+        }
         Vec2{x, y}
     }
     fn get_max_size(&self) -> Vec2<i32> {
@@ -754,6 +837,9 @@ impl Element for Scroll {
 
     fn transmit_msg(&mut self, msg: ActionMsg, stop: bool) -> Option<ActionMsg> {
         let mut loc_msg = self.scroll_bar.transmit_msg(msg.clone(), false);
+        if let Some(tmp) = loc_msg {
+            loc_msg = self.scroll_bar_bg.transmit_msg(tmp, false);
+        }
         if *self.scroll_trigger.borrow() {
             self.rescale_elements();
         }

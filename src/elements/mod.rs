@@ -290,7 +290,7 @@ impl Window {
             .with_dimensions(width, height);
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
-            .with_multisampling(8);
+            .with_multisampling(4);
         let display = glium::Display::new(
             window, context, &events_loop
         ).unwrap();
@@ -298,36 +298,15 @@ impl Window {
 
 
         // create conrod ui
-        let mut ui =  conrod::UiBuilder::new(
+        let ui =  conrod::UiBuilder::new(
             [width as f64, height as f64]
         ).build();
 
-
-        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-
-        let mut ressources = WindowRessources::new();
-        ressources.add_font(
-            &mut ui,
-            "NotoSans-Regular".to_string(), 
-            &assets.join("fonts/NotoSans/NotoSans-Regular.ttf")
-        );
-
-        // Add a `Font` to the `Ui`'s `font::Map` from file.
-        //let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-        //let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
-        //ui.fonts.insert_from_file(font_path).unwrap();
-
-        // Add a font to the ui's font::map from file
-        /*const FONT_PATH: &'static str =
-            concat!(env!("CARGO_MANIFEST_DIR"),
-                "\\assets\\fonts\\NotoSans\\NotoSans-Regular.ttf");
-        ui.fonts.insert_from_file(FONT_PATH).unwrap();*/
+        // storage for any ressource
+        let ressources = WindowRessources::new();
 
         // connect conrod::render::Primitives to glium Surface
         let renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
-
-        // image mapping, here: none
-        //let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
         let (selfsender, selfreceiver): (Sender<ActionMsg>, Receiver<ActionMsg>)
             = mpsc::channel();

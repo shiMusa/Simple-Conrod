@@ -138,7 +138,6 @@ pub fn example5() {
 
     // construct window
     let mut window = Window::new("Scroll Test".to_string(), 800,800);
-    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
     window.add_receiver(receiver);
 
     // setup timer for continuous refresh of window
@@ -147,6 +146,17 @@ pub fn example5() {
     let _timer = Timer::new(sender.clone(), timer_receiver, 120.0);
     window.add_sender(timer_sender);
 
+    // * fonts -----------------------------------------------------------
+    window.add_font(
+        "NotoSans-Regular".to_string(),
+        &assets.join("fonts/NotoSans/NotoSans-Regular.ttf")
+    );
+    let font = Font::new("NotoSans-Regular".to_string())
+        .with_size(Dim::Relative(0.05))
+        .with_wrapping(FontWrapping::Character);
+
+
+    // * images ----------------------------------------------------------
     window.add_image(
         "JapaneseFan".to_string(),
         &assets.join("images/japanese-fan.png")
@@ -198,7 +208,7 @@ pub fn example5() {
             PadAlignment::Center,
             PadElementSize::Negative(Dim::Absolute(50), Dim::Absolute(25))
         );
-        pad.set_min_size(Vec2{x: 400, y: 150});
+        pad.set_min_size(Vec2{x: 100, y: 100});
 
         let animation = Animation::new(pad)
             .with_duration(150.0)
@@ -358,7 +368,7 @@ pub fn example3() {
 
     // construct window
     let mut window = Window::new("Animation Test".to_string(), 800,800);
-    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
+    let font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
@@ -470,7 +480,7 @@ pub fn expample2() {
 
     // construct window
     let mut window = Window::new("Animation Test".to_string(), 800,800);
-    let font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
+    let font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
     window.add_receiver(receiver);
     window.add_sender(timer_sender);
 
@@ -480,7 +490,7 @@ pub fn expample2() {
         "NotoSans-Italic".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Italic.ttf")
     );
-    let _font_italic = Font::new("NotoSans-Italic".to_string(), 42, conrod::color::BLACK);
+    let _font_italic = Font::new("NotoSans-Italic".to_string()).with_size(Dim::Absolute(42));
     window.add_font(
         "NotoSans-Bold".to_string(),
         &assets.join("fonts/NotoSans/NotoSans-Bold.ttf")
@@ -571,7 +581,7 @@ Y88888P YP    YP
 pub fn example() {
 
     let mut window = Window::new("Container".to_string(), 800, 800);
-    let mut font = Font::new("NotoSans-Regular".to_string(), 42, conrod::color::BLACK);
+    let mut font = Font::new("NotoSans-Regular".to_string()).with_size(Dim::Absolute(42));
     let (base_sender, base_receiver): (Sender<ActionMsg>, Receiver<ActionMsg>) = mpsc::channel();
     window.add_receiver(base_receiver);
 
@@ -626,7 +636,7 @@ pub fn example() {
         PadElementSize::Positive(Dim::Absolute(200), Dim::Absolute(200)) )
     );
 
-    font.set_size(60);
+    font.set_size(Dim::Absolute(60));
     let tmp = font.clone();
     inner_layer.push(
         Socket::new(
@@ -649,7 +659,7 @@ pub fn example() {
 
     list.push(inner_layer);
 
-    font.set_size(42);
+    font.set_size(Dim::Absolute(42));
     let tmp = font.clone();
     layers.push(
         Socket::new(list)

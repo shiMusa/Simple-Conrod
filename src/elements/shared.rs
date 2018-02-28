@@ -39,23 +39,56 @@ YP       `Y88P'  VP   V8P    YP
 
 
 */
+#[derive(Debug, Clone)]
+pub enum FontJustification {
+    Left, Center, Right
+}
+#[derive(Debug, Clone)]
+pub enum FontWrapping {
+    Word, Character
+}
+
 
 #[derive(Debug, Clone)]
 pub struct Font {
     text: String,
-    size: u32,
+    size: Dim,
     font_id: String,
     color: conrod::Color,
+    justi: FontJustification,
+    wrap: FontWrapping,
 }
 
 impl Font {
-    pub fn new(font_id: String, size: u32, color: conrod::Color) -> Self {
+    pub fn new(font_id: String) -> Self {
         Font {
             text: "".to_string(),
-            size,
+            size: Dim::Absolute(12),
             font_id,
-            color
+            color: conrod::color::BLACK,
+            justi: FontJustification::Center,
+            wrap: FontWrapping::Word
         }
+    }
+
+    pub fn with_size(mut self, size: Dim) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn with_color(mut self, color: conrod::Color) -> Self {
+        self.color = color;
+        self
+    }
+
+    pub fn with_justification(mut self, justification: FontJustification) -> Self {
+        self.justi = justification;
+        self
+    }
+
+    pub fn with_wrapping(mut self, wrapping: FontWrapping) -> Self {
+        self.wrap = wrapping;
+        self
     }
 
     pub fn write(&self, text: String) -> Self {
@@ -64,7 +97,7 @@ impl Font {
         res
     }
 
-    pub fn set_size(&mut self, size: u32) {
+    pub fn set_size(&mut self, size: Dim) {
         self.size = size;
     }
 
@@ -76,7 +109,7 @@ impl Font {
         self.text.clone()
     }
 
-    pub fn get_size(&self) -> u32 {
+    pub fn get_size(&self) -> Dim {
         self.size
     }
 
@@ -86,6 +119,22 @@ impl Font {
 
     pub fn get_color(&self) -> conrod::Color {
         self.color
+    }
+
+    pub fn set_justification(&mut self, justi: FontJustification) {
+        self.justi = justi;
+    }
+
+    pub fn get_justification(&self) -> FontJustification {
+        self.justi.clone()
+    }
+
+    pub fn set_wrapping(&mut self, wrapping: FontWrapping) {
+        self.wrap = wrapping;
+    }
+
+    pub fn get_wrapping(&self) -> FontWrapping {
+        self.wrap.clone()
     }
 }
 
